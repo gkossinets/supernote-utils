@@ -3,3 +3,55 @@
 
 # GitHub App credentials
 gha-creds-*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Test outputs and results
+test/outputs/
+test/results/
+test/output.md
+test-output-*.md
+test_*.txt
+
+# Development and implementation notes
+IMPLEMENTATION_SUMMARY*.md
+PROGRESS.md
+QUICKSTART.md
+QUICK_UPDATE_GUIDE.md
+OLLAMA_FIX.md
+TODO
+
+# Temporary test scripts
+test_ollama_image.py
+check_encoding.py

@@ -1,72 +1,35 @@
 #!/usr/bin/env python3
 """
 PDF Handwritten Text Recognition using LLM APIs
-Processes PDF pages and extracts handwritten text using Anthropic Claude, Google Gemini, or OpenAI GPT.
-
-To get a list of available Claude models, run the following command in your terminal (make sure ANTHROPIC_API_KEY is set):
-curl -s https://api.anthropic.com/v1/models --header "x-api-key: $ANTHROPIC_API_KEY" --header "anthropic-version: 2023-06-01" | jq . | grep \"id\"
-      "id": "claude-haiku-4-5-20251001",
-      "id": "claude-sonnet-4-5-20250929",
-      "id": "claude-opus-4-1-20250805",
-      "id": "claude-opus-4-20250514",
-      "id": "claude-sonnet-4-20250514",
-      "id": "claude-3-7-sonnet-20250219",
-      "id": "claude-3-5-sonnet-20241022",
-      "id": "claude-3-5-haiku-20241022",
-      "id": "claude-3-5-sonnet-20240620",
-      "id": "claude-3-haiku-20240307",
-      "id": "claude-3-opus-20240229",
-
+Processes PDF pages and extracts handwritten text using Anthropic Claude, Google Gemini, or Ollama.
 """
 
 import argparse
 import base64
 import io
-import json
 import sys
 import os
 import re
 from pathlib import Path
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Tuple
 
-# Required packages - install with:
-# pip install anthropic google-generativeai openai PyPDF2 pdf2image pillow
-
+# Required packages
 try:
     import anthropic
     import google.generativeai as genai
-    import openai
+    import ollama
     from PIL import Image
     import PyPDF2
     from pdf2image import convert_from_path
+    
+    # Import shared transcription prompt
+    from transcription_prompt import DEFAULT_PROMPT
 except ImportError as e:
     print(f"Error: Missing required package. Install with:")
-    print("pip install anthropic google-generativeai openai PyPDF2 pdf2image pillow")
+    print("pip install anthropic google-generativeai ollama PyPDF2 pdf2image pillow")
     print(f"Specific error: {e}")
     sys.exit(1)
 
-DEFAULT_PROMPT = """You are an expert transcriber of handwritten documents. Your two most important goals are **semantic fidelity** (the text must mean the same thing) and **output purity** (you must only output the transcription).
-
-**Output Purity: Provide ONLY the transcribed text as standard Markdown. Absolutely no introductions, summaries, or commentary.**
-
-**1. Guiding Principles for Transcription**
-
-* **Logic is Law:** The final transcription of any sentence **must** make logical sense. Be skeptical of odd phrases. For example, a phrase like "moon year" is less probable in a personal journal than "mood repair." Prioritize the interpretation that fits the context of personal reflection over a simple visual match.
-* **The Conservative Principle for Proper Nouns (Very Important):**
-    * Proper nouns are the most common source of error. **Do not guess or substitute a more common name.** 
-    * If a name is highly ambiguous, transcribe it phonetically as best as you can, even if it does not form a known word. It is better to have a close phonetic match than a completely different name.
-* **Context Over Shape:** Use the surrounding context to resolve ambiguity. A word in a "scary legend" is more likely to be "witch" than "wheel," even if the handwriting is unclear. "Writing" is more probable than "Ugh" near "filmmaking".
-
-**2. Formatting Rules (Strict)**
-
-* **Paragraphs:** Join all lines in a visually contiguous block of text into a single flowing paragraph. Separate distinct text blocks with one blank line.
-* **Headers:** Use Markdown bolding for headers (highlighted inverted text). **Do not** use '#' heading symbols.
-* **Highlighting & Symbols:** Pay extremely close attention to special formatting.
-    * Only enclose text in `==highlight tags==` if it is explicitly highlighted.
-    * Accurately place all symbols like em-dashes (—), exclamation points (!), and stars (☆ or ★).
-
-**Final Review:** Before concluding, perform one last check of your output, specifically for misspelled proper nouns and to ensure no introductory commentary has been added.
-"""
 
 class PDFImageExtractor:
     """Handles extraction of images from PDF files"""
@@ -80,14 +43,13 @@ class PDFImageExtractor:
                 pdf_reader = PyPDF2.PdfReader(file)
                 for page_num, page in enumerate(pdf_reader.pages, start=1):
                     if page.images:
-                        # print(f"Found {len(page.images)} embedded image(s) on page {page_num}", file=sys.stderr)
                         for image_file_object in page.images:
                             try:
                                 img = Image.open(io.BytesIO(image_file_object.data))
                                 if img.width > 100 and img.height > 100:
                                     images.append(img)
                             except Exception:
-                                continue # Ignore images that can't be opened
+                                continue
             if images:
                 print(f"Successfully extracted {len(images)} main embedded images", file=sys.stderr)
         except Exception as e:
@@ -116,19 +78,21 @@ class PDFImageExtractor:
 
 
 class PDFHandwritingOCR:
-    def __init__(self, api_provider: str, additional_prompt: str = ""):
+    def __init__(self, api_provider: str, model_name: Optional[str] = None,
+                 additional_prompt: str = "", temperature: float = 0.2):
         """Initialize the OCR processor with specified API provider."""
         self.api_provider = api_provider.lower()
+        self.temperature = temperature
         self.prompt = DEFAULT_PROMPT
         
         if additional_prompt:
             self.prompt = f"{DEFAULT_PROMPT}\n\nAdditional instructions: {additional_prompt}\n\nExtracted text (Markdown):\n"
         
-        self._init_api_clients()
+        self._init_api_clients(model_name)
     
-    def _init_api_clients(self):
+    def _init_api_clients(self, model_name: Optional[str] = None):
         """Initialize API clients based on provider with environment variables."""
-        self.api_backend = None # Will be 'anthropic', 'google', or 'openai'
+        self.api_backend = None
         
         if self.api_provider in ["claude", "claude-haiku", "claude-sonnet"]:
             api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -136,11 +100,11 @@ class PDFHandwritingOCR:
             self.client = anthropic.Anthropic(api_key=api_key)
             self.api_backend = 'anthropic'
             if self.api_provider == "claude-sonnet":
-                self.model = "claude-sonnet-4-5-20250929" 
-                print("Using Claude Sonnet 4.5 model (powerful, higher accuracy)", file=sys.stderr)
+                self.model = model_name or "claude-sonnet-4-5-20250929" 
+                print(f"Using Claude Sonnet 4.5 model (temperature={self.temperature})", file=sys.stderr)
             else:
-                self.model = "claude-haiku-4-5-20251001" 
-                print("Using Claude 4.5 Haiku model (faster, more cost-effective)", file=sys.stderr)
+                self.model = model_name or "claude-haiku-4-5-20251001" 
+                print(f"Using Claude 4.5 Haiku model (temperature={self.temperature})", file=sys.stderr)
 
         elif self.api_provider in ["gemini", "gemini-flash", "gemini-pro"]:
             api_key = os.getenv("GOOGLE_API_KEY")
@@ -148,22 +112,44 @@ class PDFHandwritingOCR:
             genai.configure(api_key=api_key)
             self.api_backend = 'google'
             if self.api_provider == "gemini-pro":
-                self.client = genai.GenerativeModel('gemini-1.5-pro')
-                print("Using Gemini 1.5 Pro model (powerful, higher accuracy)", file=sys.stderr)
+                model = model_name or 'gemini-2.5-pro'
+                self.client = genai.GenerativeModel(model)
+                print(f"Using Gemini model: {model} (temperature={self.temperature})", file=sys.stderr)
             else:
-                self.client = genai.GenerativeModel('gemini-1.5-flash')
-                print("Using Gemini 1.5 Flash model (fast, free tier)", file=sys.stderr)
+                model = model_name or 'gemini-2.5-flash'
+                self.client = genai.GenerativeModel(model)
+                print(f"Using Gemini model: {model} (temperature={self.temperature})", file=sys.stderr)
         
-        elif self.api_provider in ["chatgpt", "gpt-4o"]:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key: raise ValueError("OPENAI_API_KEY environment variable not set.")
-            self.client = openai.OpenAI(api_key=api_key)
-            self.api_backend = 'openai'
-            self.model = "gpt-4o"
-            print("Using OpenAI GPT-4o model (powerful, high accuracy)", file=sys.stderr)
+        elif self.api_provider == "ollama":
+            self.api_backend = 'ollama'
+            self.model = model_name or self._detect_ollama_vision_model()
+            if not self.model:
+                raise ValueError("No vision models found in Ollama. Please specify a model with --model")
+            print(f"Using Ollama model: {self.model} (temperature={self.temperature})", file=sys.stderr)
             
         else:
             raise ValueError(f"Unsupported API provider: {self.api_provider}")
+    
+    def _detect_ollama_vision_model(self) -> Optional[str]:
+        """Detect first available vision model from Ollama"""
+        try:
+            models = ollama.list()
+            model_list = models.get('models', [])
+            
+            vision_keywords = ['qwen2.5-vl:7b', 'qwen2.5-vl', 'llama3.2-vision', 'llava', 'minicpm', 'vision']
+            
+            for model in model_list:
+                name = model.get('name', '')
+                if 'qwen2.5-vl:7b' in name.lower():
+                    return name
+            
+            for model in model_list:
+                name = model.get('name', '')
+                if any(keyword in name.lower() for keyword in vision_keywords[1:]):
+                    return name
+        except Exception as e:
+            print(f"Warning: Could not auto-detect Ollama models: {e}", file=sys.stderr)
+        return None
 
     def image_to_base64(self, image: Image.Image) -> str:
         """Convert PIL Image to base64 string"""
@@ -178,7 +164,9 @@ class PDFHandwritingOCR:
         base64_image = self.image_to_base64(image)
         try:
             response = self.client.messages.create(
-                model=self.model, max_tokens=4096,
+                model=self.model, 
+                max_tokens=4096,
+                temperature=self.temperature,
                 messages=[{"role": "user","content": [{"type": "text","text": self.prompt},{"type": "image","source": {"type": "base64","media_type": "image/jpeg","data": base64_image}}]}]
             )
             return response.content[0].text
@@ -187,26 +175,32 @@ class PDFHandwritingOCR:
     def process_with_gemini(self, image: Image.Image) -> str:
         """Process image using Google Gemini API"""
         try:
-            response = self.client.generate_content([self.prompt, image])
+            response = self.client.generate_content(
+                [self.prompt, image],
+                generation_config=genai.types.GenerationConfig(
+                    temperature=self.temperature,
+                )
+            )
             return response.text
         except Exception as e: return f"Error processing with Gemini: {str(e)}"
 
-    def process_with_openai(self, image: Image.Image) -> str:
-        """Process image using OpenAI GPT API"""
-        base64_image = self.image_to_base64(image)
+    def process_with_ollama(self, image: Image.Image) -> str:
+        """Process image using Ollama local model"""
         try:
-            response = self.client.chat.completions.create(
+            response = ollama.chat(
                 model=self.model,
                 messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": self.prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                    ]}],
-                max_tokens=4096
+                    'role': 'user',
+                    'content': self.prompt,
+                }],
+                images=[image],
+                options={
+                    'temperature': self.temperature,
+                }
             )
-            return response.choices[0].message.content
-        except Exception as e: return f"Error processing with OpenAI: {str(e)}"
+            return response['message']['content']
+        except Exception as e:
+            return f"Error processing with Ollama: {str(e)}"
 
     def process_page(self, image: Image.Image, page_num: int) -> Tuple[int, str]:
         """Process a single page image"""
@@ -216,8 +210,8 @@ class PDFHandwritingOCR:
             text = self.process_with_anthropic(image)
         elif self.api_backend == 'google':
             text = self.process_with_gemini(image)
-        elif self.api_backend == 'openai':
-            text = self.process_with_openai(image)
+        elif self.api_backend == 'ollama':
+            text = self.process_with_ollama(image)
         else:
             raise RuntimeError("API backend not configured correctly.")
         return page_num, text
@@ -256,11 +250,7 @@ class PDFHandwritingOCR:
         try:
             for i, image in enumerate(images, start=1):
                 page_num, text = self.process_page(image, i)
-
-                # --- MODIFICATION START ---
-                # Added a call to the new cleanup function.
                 text = self.strip_code_block_wrapper(text)
-                # --- MODIFICATION END ---
                 
                 if plain_text: text = self.strip_markdown(text)
                 if i > 1: output_stream.write("\n\n")
@@ -280,30 +270,38 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Environment Variables:
-  OPENAI_API_KEY    - Required for chatgpt/gpt-4o models
   ANTHROPIC_API_KEY - Required for Claude models
   GOOGLE_API_KEY    - Required for Gemini models
+  (Ollama requires local installation at http://localhost:11434)
 
 Examples:
-  # Process with OpenAI's GPT-4o (recommended)
-  %(prog)s --api gpt-4o input.pdf
+  # Process with Claude Sonnet
+  %(prog)s input.pdf --api claude-sonnet --temperature 0.2
 
-  # Process with Gemini and save as a plain text file
+  # Process with Gemini and save as plain text
   %(prog)s --api gemini --plain-text input.pdf --out result.txt
 
-  # Process with Claude and add page separators
-  %(prog)s --api claude-sonnet --page_separator scan.pdf > result.md
+  # Process with Ollama local model
+  %(prog)s --api ollama --model llama3.2-vision:11b input.pdf > result.md
         """
     )
     
     parser.add_argument(
         '--api',
-        choices=['chatgpt', 'gpt-4o', 'claude', 'claude-haiku', 'claude-sonnet', 'gemini', 'gemini-flash', 'gemini-pro'],
+        choices=['claude', 'claude-haiku', 'claude-sonnet', 
+                'gemini', 'gemini-flash', 'gemini-pro', 'ollama'],
         default='claude-sonnet',
         help='LLM API service and model to use (default: claude-sonnet)'
     )
     
     parser.add_argument('input_pdf', type=Path, help='Input PDF file to process')
+    
+    parser.add_argument('--model', type=str, default=None,
+                       help='Specific model name to use (optional, provider-specific defaults will be used)')
+    
+    parser.add_argument('--temperature', type=float, default=0.2,
+                       help='Temperature for generation (0.0-2.0, default: 0.2, lower = more deterministic)')
+    
     parser.add_argument('--add_prompt', type=str, default='', help='Additional instructions to include in the prompt')
     parser.add_argument('--out', type=Path, default=None, help='Output file path (prints to stdout if not specified)')
     parser.add_argument('--force-render', action='store_true', help='Force rendering of pages instead of extracting embedded images')
@@ -313,20 +311,13 @@ Examples:
     
     args = parser.parse_args()
     
-    api_provider_map = {
-        'claude': 'claude-haiku',
-        'claude-haiku': 'claude-haiku',
-        'claude-sonnet': 'claude-sonnet',
-        'gemini': 'gemini-flash',
-        'gemini-flash': 'gemini-flash', 
-        'gemini-pro': 'gemini-pro',
-        'gpt-4o': 'gpt-4o', 
-        'chatgpt': 'gpt-4o'
-    }
-    api_provider = api_provider_map.get(args.api, args.api)
-    
     try:
-        ocr = PDFHandwritingOCR(api_provider, args.add_prompt)
+        ocr = PDFHandwritingOCR(
+            api_provider=args.api,
+            model_name=args.model,
+            additional_prompt=args.add_prompt,
+            temperature=args.temperature
+        )
         ocr.process_pdf(args.input_pdf, args.out, args.force_render, args.dpi, args.page_separator, args.plain_text)
     except (ValueError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

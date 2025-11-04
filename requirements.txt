@@ -1,0 +1,26 @@
+# Core transcription dependencies
+anthropic>=0.18.0
+google-generativeai>=0.3.0
+ollama>=0.1.0
+pillow>=9.0.0
+
+# Supernote library dependencies
+supernotelib>=0.6.0
+colour>=0.1.5
+fusepy>=3.0.1
+numpy>=1.19.0
+potracer>=0.0.1
+pypng>=0.0.20
+reportlab>=3.6.1
+svglib>=1.1.0
+svgwrite>=1.4
+
+# PDF processing (for script2text.py)
+PyPDF2>=3.0.0
+pdf2image>=1.16.0
+
+# Test suite dependencies
+python-Levenshtein>=0.20.0
+nltk>=3.8.0
+scikit-learn>=1.0.0
+sentence-transformers>=2.2.0
