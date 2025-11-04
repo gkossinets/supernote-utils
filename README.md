@@ -42,6 +42,15 @@ export GOOGLE_API_KEY="your-key-here"
 
 ## Usage
 
+### List Available Models
+
+```bash
+# List all available models from all providers
+supernote list-models
+
+# This will show available models from Claude, Gemini, and Ollama
+```
+
 ### Convert .note Files to Markdown
 
 ```bash
@@ -53,6 +62,9 @@ python note2text.py input.note --md output.md --api gemini-flash --temperature 0
 
 # Use local Ollama model (privacy-focused, no API costs)
 python note2text.py input.note --md output.md --api ollama --temperature 0.1
+
+# Specify exact model name
+supernote transcribe note input.note --model claude-3-opus-20240229
 
 # Generate both Markdown and PDF
 python note2text.py input.note --md output.md --pdf output.pdf
@@ -119,18 +131,38 @@ Results are saved to `test/results/run_TIMESTAMP.md`
 
 ## Supported Models
 
+**To see all available models, run:**
+```bash
+supernote list-models
+```
+
 ### Claude (Anthropic)
 - `claude-sonnet`: Claude Sonnet 4.5 (powerful, high accuracy)
 - `claude-haiku`: Claude Haiku 4.5 (faster, cost-effective)
+- Specific models:
+  - `claude-sonnet-4-5-20250929` (latest Sonnet)
+  - `claude-haiku-4-5-20251001` (latest Haiku)
+  - `claude-3-5-sonnet-20241022`
+  - `claude-3-5-haiku-20241022`
+  - `claude-3-opus-20240229`
+  - And more (use `supernote list-models` to see all)
 
 ### Gemini (Google)
 - `gemini-pro`: Gemini 2.5 Pro (powerful, high accuracy)
 - `gemini-flash`: Gemini 2.5 Flash (fast, free tier available)
+- Specific models:
+  - `gemini-2.5-pro` (latest Pro)
+  - `gemini-2.5-flash` (latest Flash)
+  - `gemini-2.0-flash-exp`
+  - `gemini-1.5-pro`
+  - `gemini-1.5-flash`
+  - `gemini-1.5-flash-8b`
 
 ### Ollama (Local)
 - `ollama`: Auto-detects available vision models
 - Supports: qwen2.5-vl, llama3.2-vision, llava, minicpm
 - Specify model: `--model llama3.2-vision:11b`
+- **Note:** Only models installed locally will be shown by `supernote list-models`
 
 ## Project Structure
 

@@ -146,9 +146,12 @@ class OllamaProvider(VisionProvider):
         return buffered.getvalue()
 
     @classmethod
-    def detect_available_models(cls) -> list:
+    def list_available_models(cls, api_key: Optional[str] = None) -> list[str]:
         """
-        Detect all available vision models in Ollama.
+        List all available vision models in Ollama.
+
+        Args:
+            api_key: Not used for Ollama (local models)
 
         Returns:
             List of model names
@@ -170,3 +173,13 @@ class OllamaProvider(VisionProvider):
             pass
 
         return vision_models
+
+    @classmethod
+    def detect_available_models(cls) -> list:
+        """
+        Deprecated: Use list_available_models() instead.
+
+        Returns:
+            List of model names
+        """
+        return cls.list_available_models()

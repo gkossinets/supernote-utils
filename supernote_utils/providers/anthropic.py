@@ -120,3 +120,35 @@ class AnthropicProvider(VisionProvider):
             image = image.convert("RGB")
         image.save(buffered, format="JPEG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    @classmethod
+    def list_available_models(cls, api_key: Optional[str] = None) -> list[str]:
+        """
+        List available Claude vision models.
+
+        Args:
+            api_key: Anthropic API key (optional, reads from env if not provided)
+
+        Returns:
+            List of available model names
+        """
+        if anthropic is None:
+            return []
+
+        # Return known Claude vision models
+        # Note: Anthropic doesn't provide a public API to list models,
+        # so we maintain a static list of known vision-capable models
+        available_models = [
+            cls.DEFAULT_SONNET_MODEL,
+            cls.DEFAULT_HAIKU_MODEL,
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-sonnet-20240620",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+        ]
+
+        # If API key is provided, we could optionally validate connectivity
+        # For now, just return the static list
+        return available_models

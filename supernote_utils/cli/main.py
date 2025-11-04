@@ -47,7 +47,10 @@ def main():
         default="claude-sonnet",
         help="LLM API provider (default: claude-sonnet)",
     )
-    note_parser.add_argument("--model", help="Specific model name")
+    note_parser.add_argument(
+        "--model",
+        help="Specific model name (use 'supernote list-models' to see available models)"
+    )
     note_parser.add_argument(
         "--temperature", type=float, default=0.2, help="Generation temperature (default: 0.2)"
     )
@@ -66,7 +69,10 @@ def main():
         default="claude-sonnet",
         help="LLM API provider (default: claude-sonnet)",
     )
-    pdf_parser.add_argument("--model", help="Specific model name")
+    pdf_parser.add_argument(
+        "--model",
+        help="Specific model name (use 'supernote list-models' to see available models)"
+    )
     pdf_parser.add_argument(
         "--temperature", type=float, default=0.2, help="Generation temperature (default: 0.2)"
     )
@@ -87,6 +93,11 @@ def main():
     )
     note2pdf_parser.add_argument("input", help="Input .note file")
     note2pdf_parser.add_argument("output", help="Output PDF file")
+
+    # List models command
+    list_models_parser = subparsers.add_parser(
+        "list-models", help="List available models from all providers"
+    )
 
     # Parse arguments
     args = parser.parse_args()
@@ -115,6 +126,10 @@ def main():
         else:
             convert_parser.print_help()
             sys.exit(1)
+
+    elif args.command == "list-models":
+        from supernote_utils.cli.list_models import list_available_models
+        list_available_models(args)
 
 
 if __name__ == "__main__":
