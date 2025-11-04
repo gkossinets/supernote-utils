@@ -92,3 +92,42 @@ class GoogleProvider(VisionProvider):
             return f"Gemini Flash ({self.actual_model})"
         else:
             return f"Gemini ({self.actual_model})"
+
+    @classmethod
+    def list_available_models(cls, api_key: Optional[str] = None) -> list[str]:
+        """
+        List available Gemini vision models.
+
+        Args:
+            api_key: Google API key (optional, reads from env if not provided)
+
+        Returns:
+            List of available model names
+        """
+        if genai is None:
+            return []
+
+        # Try to dynamically fetch models if API key is available
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                available_models = []
+                for model in genai.list_models():
+                    # Only include vision-capable models
+                    if "vision" in model.supported_generation_methods or \
+                       "generateContent" in model.supported_generation_methods:
+                        available_models.append(model.name.replace("models/", ""))
+                if available_models:
+                    return available_models
+            except Exception:
+                pass  # Fall back to static list
+
+        # Return known Gemini vision models (static fallback)
+        return [
+            cls.DEFAULT_PRO_MODEL,
+            cls.DEFAULT_FLASH_MODEL,
+            "gemini-2.0-flash-exp",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-8b",
+        ]
