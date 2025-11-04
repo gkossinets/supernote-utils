@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "supernote-utils"
+version = "0.1.0"
+description = "Python utilities for managing and transcribing handwritten notes from Ratta Supernote tablets"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Supernote Utils Contributors"}
+]
+keywords = ["supernote", "handwriting", "ocr", "transcription", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Core transcription dependencies
+    "anthropic>=0.18.0",
+    "google-generativeai>=0.3.0",
+    "ollama>=0.1.0",
+    "pillow>=9.0.0",
+
+    # Supernote library dependencies
+    "supernotelib>=0.6.0",
+    "colour>=0.1.5",
+    # fusepy>=3.0.1 - excluded due to compatibility issues with modern setuptools
+    "numpy>=1.19.0",
+    "potracer>=0.0.1",
+    "pypng>=0.0.20",
+    "reportlab>=3.6.1",
+    "svglib>=1.1.0",
+    "svgwrite>=1.4",
+
+    # PDF processing
+    "PyPDF2>=3.0.0",
+    "pdf2image>=1.16.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "python-Levenshtein>=0.20.0",
+    "nltk>=3.8.0",
+    "scikit-learn>=1.0.0",
+    "sentence-transformers>=2.2.0",
+]
+dev = [
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "black>=23.0.0",
+]
+
+[project.scripts]
+supernote = "supernote_utils.cli.main:main"
+note2text = "supernote_utils.cli.note2text:main"
+script2text = "supernote_utils.cli.script2text:main"
+note2pdf = "supernote_utils.cli.note2pdf:main"
+
+[project.urls]
+Homepage = "https://github.com/gkossinets/supernote-utils"
+Repository = "https://github.com/gkossinets/supernote-utils"
+Issues = "https://github.com/gkossinets/supernote-utils/issues"
+
+[tool.setuptools]
+packages = ["supernote_utils", "supernote_utils.core", "supernote_utils.providers", "supernote_utils.sources", "supernote_utils.cli"]
+
+[tool.setuptools.package-data]
+supernote_utils = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]  # Line too long (handled by formatter)
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=supernote_utils --cov-report=term-missing"
