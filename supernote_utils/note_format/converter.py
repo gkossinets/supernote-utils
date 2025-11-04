@@ -16,17 +16,13 @@
 
 import base64
 import json
-import potrace
-import svgwrite
 
 from enum import Enum, auto
 from io import BytesIO
 
 from PIL import Image
 
-from svglib.svglib import svg2rlg
 from reportlab.lib.pagesizes import A4, portrait, landscape
-from reportlab.graphics import renderPDF
 from reportlab.pdfgen import canvas
 
 from . import color
@@ -234,84 +230,6 @@ class ImageConverter:
             raise exceptions.UnknownDecodeProtocol(f'unknown decode protocol: {protocol}')
 
 
-class SvgConverter:
-    def __init__(self, notebook, palette=None):
-        self.note = notebook
-        self.palette = palette if palette is not None else color.DEFAULT_COLORPALETTE
-        self.image_converter = ImageConverter(notebook, palette=color.DEFAULT_COLORPALETTE) # use default pallete
-
-    def convert(self, page_number, visibility_overlay=None):
-        """Returns SVG string of the given page.
-
-        Parameters
-        ----------
-        page_number : int
-            page number to convert
-
-        Returns
-        -------
-        string
-            an SVG string
-        """
-        page = self.note.get_page(page_number)
-        horizontal = page.get_orientation() == fileformat.Page.ORIENTATION_HORIZONTAL
-        page_width, page_height = (self.note.get_width(), self.note.get_height())
-        if horizontal:
-            page_height, page_width = (page_width, page_height)
-        dwg = svgwrite.Drawing('dummy.svg', profile='full', size=(page_width, page_height))
-
-        bg_is_invisible = visibility_overlay is not None and visibility_overlay.get('BGLAYER') == VisibilityOverlay.INVISIBLE
-        if not bg_is_invisible:
-            vo_only_bg = build_visibility_overlay(
-                background=VisibilityOverlay.VISIBLE,
-                main=VisibilityOverlay.INVISIBLE,
-                layer1=VisibilityOverlay.INVISIBLE,
-                layer2=VisibilityOverlay.INVISIBLE,
-                layer3=VisibilityOverlay.INVISIBLE)
-            bg_img = self.image_converter.convert(page_number, visibility_overlay=vo_only_bg)
-            buffer = BytesIO()
-            bg_img.save(buffer, format='png')
-            bg_b64str = base64.b64encode(buffer.getvalue()).decode('ascii')
-            dwg.add(dwg.image('data:image/png;base64,' + bg_b64str, insert=(0, 0), size=(page_width, page_height)))
-
-        vo_except_bg = build_visibility_overlay(background=VisibilityOverlay.INVISIBLE)
-        img = self.image_converter.convert(page_number, visibility_overlay=vo_except_bg)
-
-        def generate_color_mask(img, c):
-            mask = img.copy().convert('L')
-            return mask.point(lambda x: 0 if x == c else 1, mode='1')
-
-        default_palette = color.DEFAULT_COLORPALETTE
-        default_color_list = [default_palette.black, default_palette.darkgray, default_palette.gray, default_palette.white]
-        user_color_list = [self.palette.black, self.palette.darkgray, self.palette.gray, self.palette.white]
-        for i, c in enumerate(default_color_list):
-            user_color = user_color_list[i]
-            mask = generate_color_mask(img, c)
-            # create a bitmap from the array
-            bmp = potrace.Bitmap(mask)
-            # trace the bitmap to a path
-            path = bmp.trace()
-            # iterate over path curves
-            if len(path) > 0:
-                svgpath = dwg.path(fill=color.web_string(user_color, mode=self.palette.mode))
-                for curve in path:
-                    start = curve.start_point
-                    svgpath.push("M", start.x, start.y)
-                    for segment in curve:
-                        end = segment.end_point
-                        if segment.is_corner:
-                            c = segment.c
-                            svgpath.push("L", c.x, c.y)
-                            svgpath.push("L", end.x, end.y)
-                        else:
-                            c1 = segment.c1
-                            c2 = segment.c2
-                            svgpath.push("C", c1.x, c1.y, c2.x, c2.y, end.x, end.y)
-                    svgpath.push("Z")
-                dwg.add(svgpath)
-        return dwg.tostring()
-
-
 class PdfConverter:
     def __init__(self, notebook, palette=None):
         self.note = notebook
@@ -326,7 +244,7 @@ class PdfConverter:
         page_number : int
             page number to convert
         vectorize : bool
-            convert handwriting to vector
+            convert handwriting to vector (NOT SUPPORTED - will be ignored)
         enable_link : bool
             enable page links and web links
         enable_keyword : bool
@@ -338,11 +256,13 @@ class PdfConverter:
             bytes of PDF data
         """
         if vectorize:
-            converter = SvgConverter(self.note, self.palette)
-            renderer_class = PdfConverter.SvgPageRenderer
-        else:
-            converter = ImageConverter(self.note, self.palette)
-            renderer_class = PdfConverter.ImgPageRenderer
+            raise NotImplementedError(
+                "Vectorized PDF conversion requires SVG dependencies (potrace, svgwrite, svglib) "
+                "which are not included in this minimal version. Use vectorize=False instead."
+            )
+
+        converter = ImageConverter(self.note, self.palette)
+        renderer_class = PdfConverter.ImgPageRenderer
         imglist = self._create_image_list(converter, page_number)
         pdf_data = BytesIO()
         self._create_pdf(pdf_data, imglist, renderer_class, enable_link, enable_keyword)
@@ -418,21 +338,6 @@ class PdfConverter:
         (w, h) = self.pagesize
         return (left * scale_x, h - top * scale_y, right * scale_x, h - bottom * scale_y)
 
-    class SvgPageRenderer:
-        def __init__(self, svg, pagesize):
-            self.svg = svg
-            self.pagesize = pagesize
-            self.drawing = svg2rlg(BytesIO(bytes(svg, 'ascii')))
-            (w, h) = pagesize
-            (self.scale_x, self.scale_y) = (w / self.drawing.width, h / self.drawing.height)
-            self.drawing.scale(self.scale_x, self.scale_y)
-
-        def get_scale(self):
-            return (self.scale_x, self.scale_y)
-
-        def draw(self, cvs):
-            renderPDF.draw(self.drawing, cvs, 0, 0)
-
     class ImgPageRenderer:
         def __init__(self, img, pagesize):
             self.img = img
@@ -445,35 +350,3 @@ class PdfConverter:
         def draw(self, cvs):
             (w, h) = self.pagesize
             cvs.drawInlineImage(self.img, 0, 0, width=w, height=h)
-
-
-class TextConverter:
-    def __init__(self, notebook, palette=None):
-        self.note = notebook
-        self.palette = palette
-
-    def convert(self, page_number):
-        """Returns text of the given page if available.
-
-        Parameters
-        ----------
-        page_number : int
-            page number to convert
-
-        Returns
-        -------
-        string
-            a recognized text if available, otherwise None
-        """
-        if not self.note.is_realtime_recognition():
-            return None
-        page = self.note.get_page(page_number)
-        if page.get_recogn_status() != fileformat.Page.RECOGNSTATUS_DONE:
-            return None
-        binary = page.get_recogn_text()
-        decoder = Decoder.TextDecoder()
-        text_list = decoder.decode(binary)
-        if text_list is None:
-            return None
-        return ' '.join(text_list)
-

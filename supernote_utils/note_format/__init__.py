@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = '0.6.2'
+"""Supernote .note file format parser and converter."""
 
 from . import color
 from . import converter
-
 from .exceptions import *
 from .fileformat import *
-from .manipulator import *
 from .parser import *
+
+__version__ = '0.6.2'
