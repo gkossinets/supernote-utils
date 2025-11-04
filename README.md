@@ -9,7 +9,7 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 - **Temperature control** for deterministic transcription (reduce hallucinations)
 - **Local LLM support** via Ollama (privacy-focused, no API costs)
 - **Comprehensive test suite** for comparing transcription quality across models
-- **PDF generation** from .note files using supernotelib
+- **PDF generation** from .note files
 
 ## Installation
 
@@ -213,17 +213,17 @@ supernote list-models
 
 ```
 .
-├── note2text.py              # Convert .note to Markdown
-├── script2text.py            # Convert PDF to Markdown
-├── note2pdf.py               # Convert .note to PDF
-├── transcription_prompt.py   # Shared transcription prompt
-├── test_transcription.py     # Test suite
-├── requirements.txt          # Python dependencies
-├── supernotelib/            # Supernote file format library
-└── test/                    # Test files
-    ├── test.note            # Sample handwritten note
-    ├── test-transcribed.md  # Reference transcription
-    └── results/             # Test results
+├── supernote_utils/         # Main package
+│   ├── cli/                 # Command-line interface
+│   ├── core/                # Transcription engine
+│   ├── providers/           # LLM provider implementations
+│   ├── sources/             # File source handlers
+│   └── note_format/         # Supernote .note file format parser
+├── test/                    # Test files
+│   ├── test.note            # Sample handwritten note
+│   ├── test-transcribed.md  # Reference transcription
+│   └── results/             # Test results
+└── pyproject.toml           # Package configuration
 ```
 
 ## Tips for Best Results

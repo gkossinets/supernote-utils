@@ -8,12 +8,8 @@ from PIL import Image
 
 from supernote_utils.exceptions import FileFormatError
 
-try:
-    from supernotelib import parser
-    from supernotelib.converter import ImageConverter
-except ImportError:
-    parser = None
-    ImageConverter = None
+from supernote_utils.note_format import parser
+from supernote_utils.note_format.converter import ImageConverter
 
 
 class NoteFileHandler:
@@ -33,18 +29,13 @@ class NoteFileHandler:
         Raises:
             FileFormatError: If file cannot be read or is invalid format
         """
-        if parser is None or ImageConverter is None:
-            raise FileFormatError(
-                "supernotelib not installed. Install with: pip install supernotelib"
-            )
-
         if not note_path.exists():
             raise FileNotFoundError(f"Note file not found: {note_path}")
 
         print(f"Loading .note file: {note_path}", file=sys.stderr)
 
         try:
-            # Load the notebook using supernotelib
+            # Load the notebook using note_format parser
             notebook = parser.load_notebook(str(note_path))
 
             # Create image converter
@@ -67,7 +58,7 @@ class NoteFileHandler:
     @staticmethod
     def generate_pdf(note_path: Path, output_path: Path) -> None:
         """
-        Generate PDF from .note file using supernotelib.
+        Generate PDF from .note file.
 
         Args:
             note_path: Path to input .note file
@@ -76,17 +67,12 @@ class NoteFileHandler:
         Raises:
             FileFormatError: If conversion fails
         """
-        if parser is None:
-            raise FileFormatError(
-                "supernotelib not installed. Install with: pip install supernotelib"
-            )
-
         try:
             with open(note_path, "rb") as f:
                 metadata = parser.parse_metadata(f)
                 notebook = parser.load(f, metadata)
 
-            from supernotelib.converter import PdfConverter
+            from supernote_utils.note_format.converter import PdfConverter
 
             pdf_converter = PdfConverter(notebook)
             pdf_data = pdf_converter.convert(-1)  # -1 means all pages
