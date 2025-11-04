@@ -13,16 +13,61 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 
 ## Installation
 
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
+### Requirements
 
-# For PDF rendering support (optional)
+- Python 3.8 or higher
+- pip (Python package installer)
+
+### Quick Install
+
+Install directly from the repository:
+
+```bash
+pip install git+https://github.com/gkossinets/supernote-utils.git
+```
+
+### Development Install
+
+For local development or to use the latest code:
+
+```bash
+# Clone the repository
+git clone https://github.com/gkossinets/supernote-utils.git
+cd supernote-utils
+
+# Install in editable mode
+pip install -e .
+
+# Install with testing dependencies (optional)
+pip install -e ".[test]"
+
+# Install with development tools (optional)
+pip install -e ".[dev]"
+```
+
+### System Dependencies
+
+For PDF rendering support (required for `script2text` and PDF output):
+
+```bash
 # On macOS:
 brew install poppler
 
 # On Ubuntu/Debian:
 sudo apt-get install poppler-utils
+
+# On Windows:
+# Download poppler from: https://github.com/oschwartz10612/poppler-windows/releases/
+# Add the bin/ directory to your PATH
+```
+
+### Verify Installation
+
+After installation, verify the CLI is working:
+
+```bash
+supernote --help
+supernote list-models
 ```
 
 ## Environment Variables
