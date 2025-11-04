@@ -104,10 +104,12 @@ class AnthropicProvider(VisionProvider):
 
     def get_display_name(self) -> str:
         """Get display name"""
-        if "sonnet" in self.actual_model.lower():
+        # If using default models, show friendly names
+        if self.actual_model == self.DEFAULT_SONNET_MODEL:
             return "Claude Sonnet 4.5"
-        elif "haiku" in self.actual_model.lower():
+        elif self.actual_model == self.DEFAULT_HAIKU_MODEL:
             return "Claude Haiku 4.5"
+        # For custom models, show the actual model name
         else:
             return f"Claude ({self.actual_model})"
 
