@@ -135,10 +135,21 @@ class AnthropicProvider(VisionProvider):
         if anthropic is None:
             return []
 
-        # Return known Claude vision models
-        # Note: Anthropic doesn't provide a public API to list models,
-        # so we maintain a static list of known vision-capable models
-        available_models = [
+        # Try to dynamically fetch models if API key is available
+        if api_key:
+            try:
+                client = anthropic.Anthropic(api_key=api_key)
+                available_models = []
+                for model in client.models.list():
+                    # All Claude models support vision, so include all
+                    available_models.append(model.id)
+                if available_models:
+                    return available_models
+            except Exception:
+                pass  # Fall back to static list
+
+        # Return known Claude vision models (static fallback)
+        return [
             cls.DEFAULT_SONNET_MODEL,
             cls.DEFAULT_HAIKU_MODEL,
             "claude-3-5-sonnet-20241022",
@@ -148,7 +159,3 @@ class AnthropicProvider(VisionProvider):
             "claude-3-sonnet-20240229",
             "claude-3-haiku-20240307",
         ]
-
-        # If API key is provided, we could optionally validate connectivity
-        # For now, just return the static list
-        return available_models
