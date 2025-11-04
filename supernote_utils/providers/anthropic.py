@@ -149,11 +149,11 @@ class AnthropicProvider(VisionProvider):
                 pass  # Fall back to static list
 
         # Return known Claude vision models (static fallback)
-        # Listed newest to oldest, matching API ordering
+        # List matches API response as of November 2025
         return [
             # Claude 4.5 (latest)
-            cls.DEFAULT_SONNET_MODEL,  # claude-sonnet-4-5-20250929
             cls.DEFAULT_HAIKU_MODEL,   # claude-haiku-4-5-20251001
+            cls.DEFAULT_SONNET_MODEL,  # claude-sonnet-4-5-20250929
             # Claude 4.1 / 4
             "claude-opus-4-1-20250805",
             "claude-opus-4-20250514",
@@ -161,10 +161,7 @@ class AnthropicProvider(VisionProvider):
             # Claude 3.7 / 3.5
             "claude-3-7-sonnet-20250219",
             "claude-3-5-haiku-20241022",
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-sonnet-20240620",
-            # Claude 3 (older models, may be deprecated)
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
+            # Claude 3
             "claude-3-haiku-20240307",
+            "claude-3-opus-20240229",
         ]
