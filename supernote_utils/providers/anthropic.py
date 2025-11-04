@@ -137,20 +137,33 @@ class AnthropicProvider(VisionProvider):
         if anthropic is None:
             return []
 
-        # Return known Claude vision models
-        # Note: Anthropic doesn't provide a public API to list models,
-        # so we maintain a static list of known vision-capable models
-        available_models = [
-            cls.DEFAULT_SONNET_MODEL,
-            cls.DEFAULT_HAIKU_MODEL,
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-sonnet-20240620",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307",
-        ]
+        # Try to dynamically fetch models if API key is available
+        if api_key:
+            try:
+                client = anthropic.Anthropic(api_key=api_key)
+                available_models = []
+                for model in client.models.list():
+                    # All Claude models support vision, so include all
+                    available_models.append(model.id)
+                if available_models:
+                    return available_models
+            except Exception:
+                pass  # Fall back to static list
 
-        # If API key is provided, we could optionally validate connectivity
-        # For now, just return the static list
-        return available_models
+        # Return known Claude vision models (static fallback)
+        # List matches API response as of November 2025
+        return [
+            # Claude 4.5 (latest)
+            cls.DEFAULT_HAIKU_MODEL,   # claude-haiku-4-5-20251001
+            cls.DEFAULT_SONNET_MODEL,  # claude-sonnet-4-5-20250929
+            # Claude 4.1 / 4
+            "claude-opus-4-1-20250805",
+            "claude-opus-4-20250514",
+            "claude-sonnet-4-20250514",
+            # Claude 3.7 / 3.5
+            "claude-3-7-sonnet-20250219",
+            "claude-3-5-haiku-20241022",
+            # Claude 3
+            "claude-3-haiku-20240307",
+            "claude-3-opus-20240229",
+        ]
