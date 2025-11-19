@@ -1,7 +1,7 @@
 """Google Gemini vision provider"""
 
 import sys
-from typing import Optional
+from typing import List, Optional
 
 from PIL import Image
 
@@ -91,6 +91,72 @@ class GoogleProvider(VisionProvider):
 
             response = self.client.generate_content(
                 [prompt, image],
+                generation_config=genai.types.GenerationConfig(
+                    temperature=self.temperature,
+                ),
+                safety_settings=safety_settings,
+            )
+
+            # Check finish_reason before accessing text
+            if hasattr(response, 'candidates') and len(response.candidates) > 0:
+                candidate = response.candidates[0]
+                finish_reason = candidate.finish_reason
+
+                # finish_reason values: 0=UNSPECIFIED, 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION, 5=OTHER
+                if finish_reason == 4:  # RECITATION
+                    raise ProviderAPIError(
+                        "Gemini detected potential copyrighted content. This is likely a false positive "
+                        "for handwritten OCR. Try: (1) using a different image section, (2) retrying the "
+                        "request, or (3) using a different LLM provider (e.g., --api claude-sonnet)."
+                    )
+                elif finish_reason == 3:  # SAFETY
+                    raise ProviderAPIError(
+                        "Gemini blocked the response due to safety filters. "
+                        "Try using a different LLM provider (e.g., --api claude-sonnet)."
+                    )
+                elif finish_reason not in [0, 1]:  # Not UNSPECIFIED or STOP
+                    raise ProviderAPIError(
+                        f"Gemini stopped generation with finish_reason={finish_reason}. "
+                        "Try using a different LLM provider (e.g., --api claude-sonnet)."
+                    )
+
+            return response.text
+
+        except ProviderAPIError:
+            # Re-raise our custom errors
+            raise
+        except Exception as e:
+            raise ProviderAPIError(f"Google API error: {str(e)}") from e
+
+    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+        """Transcribe multiple images in a single API call"""
+        try:
+            # Configure safety settings to reduce false positives for OCR tasks
+            safety_settings = [
+                {
+                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    "threshold": "BLOCK_ONLY_HIGH"
+                },
+                {
+                    "category": "HARM_CATEGORY_HARASSMENT",
+                    "threshold": "BLOCK_ONLY_HIGH"
+                },
+                {
+                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                    "threshold": "BLOCK_ONLY_HIGH"
+                },
+                {
+                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    "threshold": "BLOCK_ONLY_HIGH"
+                },
+            ]
+
+            # Build content array with prompt and all images
+            content = [prompt]
+            content.extend(images)
+
+            response = self.client.generate_content(
+                content,
                 generation_config=genai.types.GenerationConfig(
                     temperature=self.temperature,
                 ),

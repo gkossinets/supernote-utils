@@ -2,7 +2,7 @@
 
 import io
 import sys
-from typing import Optional
+from typing import List, Optional
 
 from PIL import Image
 
@@ -85,6 +85,31 @@ class OllamaProvider(VisionProvider):
                         "role": "user",
                         "content": prompt,
                         "images": [image_bytes],
+                    }
+                ],
+                options={
+                    "temperature": self.temperature,
+                },
+            )
+            return response["message"]["content"]
+
+        except Exception as e:
+            raise ProviderAPIError(f"Ollama API error: {str(e)}") from e
+
+    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+        """Transcribe multiple images in a single API call"""
+        try:
+            # Convert all images to bytes
+            image_bytes_list = [self._image_to_bytes(image) for image in images]
+
+            # Call Ollama chat with multiple images
+            response = ollama.chat(
+                model=self.actual_model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                        "images": image_bytes_list,
                     }
                 ],
                 options={

@@ -6,6 +6,7 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 
 - **Direct .note to Markdown transcription** using LLM vision APIs (Claude, Gemini, Ollama)
 - **PDF to Markdown transcription** for scanned handwritten documents
+- **Batch processing** for multi-page PDFs (faster, more cost-effective)
 - **Temperature control** for deterministic transcription (reduce hallucinations)
 - **Local LLM support** via Ollama (privacy-focused, no API costs)
 - **Comprehensive test suite** for comparing transcription quality across models
@@ -121,7 +122,7 @@ python note2text.py input.note --md output.md --page-separator
 ### Convert PDF to Markdown
 
 ```bash
-# Transcribe scanned PDF
+# Transcribe scanned PDF (batch processing enabled by default)
 python script2text.py input.pdf --out output.md
 
 # Use different model and temperature
@@ -129,7 +130,15 @@ python script2text.py input.pdf --api gemini-pro --temperature 0.3 --out output.
 
 # Output plain text (strip Markdown formatting)
 python script2text.py input.pdf --plain-text --out output.txt
+
+# Adjust batch size for multi-page processing (default: 10)
+python script2text.py input.pdf --batch-size 5 --out output.md
+
+# Disable batch processing (process one page at a time)
+python script2text.py input.pdf --batch-size 1 --out output.md
 ```
+
+**Batch Processing:** By default, `script2text` processes multiple pages in a single API call (10 pages per batch). This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
 
 ### Generate PDF from .note File
 
