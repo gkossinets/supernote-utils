@@ -1,7 +1,7 @@
 """Abstract base class for LLM vision providers"""
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import List, Optional
 
 from PIL import Image
 
@@ -42,6 +42,29 @@ class VisionProvider(ABC):
             ProviderAPIError: If API call fails
         """
         pass
+
+    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+        """
+        Transcribe multiple images in a single API call.
+
+        Default implementation falls back to single-image processing.
+        Providers should override this for true batch processing.
+
+        Args:
+            images: List of PIL Images containing handwritten content
+            prompt: Transcription prompt with instructions
+
+        Returns:
+            Transcribed text as markdown (continuous across all pages)
+
+        Raises:
+            ProviderAPIError: If API call fails
+        """
+        # Default fallback: process images individually and concatenate
+        results = []
+        for image in images:
+            results.append(self.transcribe_image(image, prompt))
+        return "\n\n".join(results)
 
     @abstractmethod
     def is_available(self) -> bool:

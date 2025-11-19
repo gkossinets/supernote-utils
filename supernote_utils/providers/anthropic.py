@@ -3,7 +3,7 @@
 import base64
 import io
 import sys
-from typing import Optional
+from typing import List, Optional
 
 from PIL import Image
 
@@ -90,6 +90,39 @@ class AnthropicProvider(VisionProvider):
                                 },
                             },
                         ],
+                    }
+                ],
+            )
+            return response.content[0].text
+
+        except Exception as e:
+            raise ProviderAPIError(f"Anthropic API error: {str(e)}") from e
+
+    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+        """Transcribe multiple images in a single API call"""
+        try:
+            # Build content array with prompt and all images
+            content = [{"type": "text", "text": prompt}]
+
+            for i, image in enumerate(images, start=1):
+                base64_image = self._image_to_base64(image)
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": base64_image,
+                    },
+                })
+
+            response = self.client.messages.create(
+                model=self.actual_model,
+                max_tokens=8192,  # Increased for multiple pages
+                temperature=self.temperature,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": content,
                     }
                 ],
             )
