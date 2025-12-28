@@ -60,8 +60,8 @@ def list_available_models(args):
     print("Shortcuts:", file=sys.stderr)
     print("  claude, claude-sonnet  → anthropic:claude-sonnet-4-5-20250929", file=sys.stderr)
     print("  claude-haiku           → anthropic:claude-haiku-4-5-20251001", file=sys.stderr)
-    print("  gemini, gemini-pro     → google:gemini-2.5-pro-preview-06-05", file=sys.stderr)
-    print("  gemini-flash           → google:gemini-2.5-flash-preview-05-20", file=sys.stderr)
+    print("  gemini, gemini-pro     → google:gemini-3-pro-preview", file=sys.stderr)
+    print("  gemini-flash           → google:gemini-3-flash-preview", file=sys.stderr)
     print("  ollama                 → ollama:<auto-detected vision model>", file=sys.stderr)
     print(file=sys.stderr)
 

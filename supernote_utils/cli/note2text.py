@@ -34,6 +34,7 @@ def transcribe_note_file(args):
         transcription_config = TranscriptionConfig(
             temperature=args.temperature,
             page_separator=args.page_separator if hasattr(args, 'page_separator') else False,
+            batch_size=args.batch_size if hasattr(args, 'batch_size') else 10,
         )
 
         # Extract images from note file
@@ -114,6 +115,13 @@ Examples:
         type=float,
         default=0.2,
         help="Temperature for generation (0.0-2.0, default: 0.2)",
+    )
+
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=10,
+        help="Number of pages to process in a single API call (default: 10, use 1 to disable batching)",
     )
 
     parser.add_argument(

@@ -107,7 +107,7 @@ supernote transcribe note input.note -o output.md
 supernote transcribe note input.note -o output.md -m gemini-flash
 
 # Use specific Gemini model
-supernote transcribe note input.note -o output.md -m google:gemini-2.5-pro --temperature 0.2
+supernote transcribe note input.note -o output.md -m google:gemini-3-pro-preview --temperature 0.2
 
 # Use local Ollama model
 supernote transcribe note input.note -o output.md -m ollama:qwen2.5-vl:7b
@@ -132,7 +132,7 @@ supernote transcribe pdf input.pdf -o output.md
 supernote transcribe pdf input.pdf -m gemini-pro --temperature 0.3 -o output.md
 
 # Use specific Google model
-supernote transcribe pdf input.pdf -m google:gemini-2.5-pro -o output.md
+supernote transcribe pdf input.pdf -m google:gemini-3-pro-preview -o output.md
 
 # Output plain text (strip Markdown formatting)
 supernote transcribe pdf input.pdf -m claude --plain-text -o output.txt
@@ -203,8 +203,8 @@ Use either shortcuts or explicit `provider:model` format:
 **Shortcuts:**
 - `claude`, `claude-sonnet` → Claude Sonnet 4.5 (powerful, high accuracy)
 - `claude-haiku` → Claude Haiku 4.5 (faster, cost-effective)
-- `gemini`, `gemini-pro` → Gemini 2.5 Pro (powerful, high accuracy)
-- `gemini-flash` → Gemini 2.5 Flash (fast, free tier available)
+- `gemini`, `gemini-pro` → Gemini 3 Pro (powerful, high accuracy)
+- `gemini-flash` → Gemini 3 Flash (fast, free tier available)
 - `ollama` → Auto-detected local vision model
 
 **Explicit provider:model format:**
@@ -216,8 +216,8 @@ Use either shortcuts or explicit `provider:model` format:
 -m anthropic:claude-3-opus-20240229
 
 # Google (Gemini)
--m google:gemini-2.5-pro-preview-06-05
--m google:gemini-2.5-flash-preview-05-20
+-m google:gemini-3-pro-preview
+-m google:gemini-3-flash-preview
 -m google:gemini-2.0-flash-exp
 -m google:gemini-1.5-pro
 

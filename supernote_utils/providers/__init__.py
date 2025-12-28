@@ -44,9 +44,9 @@ def parse_model_spec(model_spec: str) -> tuple[str, Optional[str], dict]:
         "claude": ("anthropic", None, {"use_sonnet": True}),
         "claude-sonnet": ("anthropic", None, {"use_sonnet": True}),
         "claude-haiku": ("anthropic", None, {"use_sonnet": False}),
-        "gemini": ("google", "gemini-2.5-pro-preview-06-05", {"use_pro": True}),
-        "gemini-flash": ("google", "gemini-2.5-flash-preview-05-20", {"use_pro": False}),
-        "gemini-pro": ("google", "gemini-2.5-pro-preview-06-05", {"use_pro": True}),
+        "gemini": ("google", "gemini-3-pro-preview", {"use_pro": True}),
+        "gemini-flash": ("google", "gemini-3-flash-preview", {"use_pro": False}),
+        "gemini-pro": ("google", "gemini-3-pro-preview", {"use_pro": True}),
         "ollama": ("ollama", None, {}),
     }
 

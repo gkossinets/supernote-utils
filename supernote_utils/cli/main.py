@@ -69,8 +69,8 @@ examples:
   # Basic usage with default Claude Sonnet model
   supernote transcribe note input.note -o output.md
 
-  # Use Gemini Flash model
-  supernote transcribe note input.note -o output.md -m gemini-flash
+  # Use Gemini Flash model with batch processing
+  supernote transcribe note input.note -o output.md -m gemini-flash --batch-size 10
 
   # Use specific model with custom temperature
   supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1
@@ -78,8 +78,8 @@ examples:
   # Generate both markdown and PDF output
   supernote transcribe note input.note -o output.md --pdf output.pdf
 
-  # Add page separators in output
-  supernote transcribe note input.note -o output.md --page-separator
+  # Process one page at a time (disable batching)
+  supernote transcribe note input.note -o output.md --batch-size 1 --page-separator
         """
     )
     note_parser.add_argument(
@@ -109,6 +109,15 @@ examples:
         help="LLM generation temperature controlling randomness (default: 0.2). "
              "Lower values (0.0-0.2) are more deterministic and reduce hallucinations. "
              "Range: 0.0 to 2.0"
+    )
+    note_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Number of pages to process in a single API call (default: 10). "
+             "Larger batches are faster and more cost-effective. "
+             "Use 1 to disable batching and process pages individually"
     )
     note_parser.add_argument(
         "--page-separator",
