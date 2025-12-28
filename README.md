@@ -100,42 +100,48 @@ supernote list-models
 ### Convert .note Files to Markdown
 
 ```bash
-# Basic usage with Claude Sonnet
-python note2text.py input.note --md output.md
+# Basic usage with Claude Sonnet (default)
+supernote transcribe note input.note -o output.md
 
-# Use Gemini with custom temperature
-python note2text.py input.note --md output.md --api gemini-flash --temperature 0.2
+# Use Gemini with shortcut
+supernote transcribe note input.note -o output.md -m gemini-flash
 
-# Use local Ollama model (privacy-focused, no API costs)
-python note2text.py input.note --md output.md --api ollama --temperature 0.1
+# Use specific Gemini model
+supernote transcribe note input.note -o output.md -m google:gemini-2.5-pro --temperature 0.2
 
-# Specify exact model name
-supernote transcribe note input.note --model claude-3-opus-20240229
+# Use local Ollama model
+supernote transcribe note input.note -o output.md -m ollama:qwen2.5-vl:7b
+
+# Use specific Anthropic model
+supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229
 
 # Generate both Markdown and PDF
-python note2text.py input.note --md output.md --pdf output.pdf
+supernote transcribe note input.note -o output.md --pdf output.pdf
 
 # Add page separators
-python note2text.py input.note --md output.md --page-separator
+supernote transcribe note input.note -o output.md --page-separator
 ```
 
 ### Convert PDF to Markdown
 
 ```bash
 # Transcribe scanned PDF (batch processing enabled by default)
-python script2text.py input.pdf --out output.md
+supernote transcribe pdf input.pdf -o output.md
 
 # Use different model and temperature
-python script2text.py input.pdf --api gemini-pro --temperature 0.3 --out output.md
+supernote transcribe pdf input.pdf -m gemini-pro --temperature 0.3 -o output.md
+
+# Use specific Google model
+supernote transcribe pdf input.pdf -m google:gemini-2.5-pro -o output.md
 
 # Output plain text (strip Markdown formatting)
-python script2text.py input.pdf --plain-text --out output.txt
+supernote transcribe pdf input.pdf -m claude --plain-text -o output.txt
 
 # Adjust batch size for multi-page processing (default: 10)
-python script2text.py input.pdf --batch-size 5 --out output.md
+supernote transcribe pdf input.pdf --batch-size 5 -o output.md
 
 # Disable batch processing (process one page at a time)
-python script2text.py input.pdf --batch-size 1 --out output.md
+supernote transcribe pdf input.pdf --batch-size 1 -o output.md
 ```
 
 **Batch Processing:** By default, `script2text` processes multiple pages in a single API call (10 pages per batch). This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
@@ -143,7 +149,7 @@ python script2text.py input.pdf --batch-size 1 --out output.md
 ### Generate PDF from .note File
 
 ```bash
-python note2pdf.py input.note output.pdf
+supernote convert note2pdf input.note output.pdf
 ```
 
 ## Temperature Settings
@@ -190,33 +196,38 @@ Results are saved to `test/results/run_TIMESTAMP.md`
 supernote list-models
 ```
 
-### Claude (Anthropic)
-- `claude-sonnet`: Claude Sonnet 4.5 (powerful, high accuracy)
-- `claude-haiku`: Claude Haiku 4.5 (faster, cost-effective)
-- Specific models:
-  - `claude-sonnet-4-5-20250929` (latest Sonnet)
-  - `claude-haiku-4-5-20251001` (latest Haiku)
-  - `claude-3-5-sonnet-20241022`
-  - `claude-3-5-haiku-20241022`
-  - `claude-3-opus-20240229`
-  - And more (use `supernote list-models` to see all)
+### Model Selection Format
 
-### Gemini (Google)
-- `gemini-pro`: Gemini 2.5 Pro (powerful, high accuracy)
-- `gemini-flash`: Gemini 2.5 Flash (fast, free tier available)
-- Specific models:
-  - `gemini-2.5-pro` (latest Pro)
-  - `gemini-2.5-flash` (latest Flash)
-  - `gemini-2.0-flash-exp`
-  - `gemini-1.5-pro`
-  - `gemini-1.5-flash`
-  - `gemini-1.5-flash-8b`
+Use either shortcuts or explicit `provider:model` format:
 
-### Ollama (Local)
-- `ollama`: Auto-detects available vision models
-- Supports: qwen2.5-vl, llama3.2-vision, llava, minicpm
-- Specify model: `--model llama3.2-vision:11b`
-- **Note:** Only models installed locally will be shown by `supernote list-models`
+**Shortcuts:**
+- `claude`, `claude-sonnet` → Claude Sonnet 4.5 (powerful, high accuracy)
+- `claude-haiku` → Claude Haiku 4.5 (faster, cost-effective)
+- `gemini`, `gemini-pro` → Gemini 2.5 Pro (powerful, high accuracy)
+- `gemini-flash` → Gemini 2.5 Flash (fast, free tier available)
+- `ollama` → Auto-detected local vision model
+
+**Explicit provider:model format:**
+```bash
+# Anthropic (Claude)
+-m anthropic:claude-sonnet-4-5-20250929
+-m anthropic:claude-haiku-4-5-20251001
+-m anthropic:claude-3-5-sonnet-20241022
+-m anthropic:claude-3-opus-20240229
+
+# Google (Gemini)
+-m google:gemini-2.5-pro-preview-06-05
+-m google:gemini-2.5-flash-preview-05-20
+-m google:gemini-2.0-flash-exp
+-m google:gemini-1.5-pro
+
+# Ollama (Local)
+-m ollama:qwen2.5-vl:7b
+-m ollama:llama3.2-vision:11b
+-m ollama:llava:latest
+```
+
+**Note:** Only models installed locally will be shown by `supernote list-models`
 
 ## Project Structure
 

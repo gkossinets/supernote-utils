@@ -42,14 +42,11 @@ def main():
     note_parser.add_argument("input", help="Input .note file")
     note_parser.add_argument("-o", "--output", help="Output markdown file (stdout if not specified)")
     note_parser.add_argument(
-        "--api",
-        choices=["claude", "claude-haiku", "claude-sonnet", "gemini", "gemini-flash", "gemini-pro", "ollama"],
+        "-m", "--model",
         default="claude-sonnet",
-        help="LLM API provider (default: claude-sonnet)",
-    )
-    note_parser.add_argument(
-        "--model",
-        help="Specific model name (use 'supernote list-models' to see available models)"
+        help="Model to use. Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
+             "google:gemini-2.5-pro, ollama:qwen2.5-vl:7b) or shortcuts: "
+             "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama"
     )
     note_parser.add_argument(
         "--temperature", type=float, default=0.2, help="Generation temperature (default: 0.2)"
@@ -64,14 +61,11 @@ def main():
     pdf_parser.add_argument("input", help="Input PDF file")
     pdf_parser.add_argument("-o", "--output", help="Output markdown file (stdout if not specified)")
     pdf_parser.add_argument(
-        "--api",
-        choices=["claude", "claude-haiku", "claude-sonnet", "gemini", "gemini-flash", "gemini-pro", "ollama"],
+        "-m", "--model",
         default="claude-sonnet",
-        help="LLM API provider (default: claude-sonnet)",
-    )
-    pdf_parser.add_argument(
-        "--model",
-        help="Specific model name (use 'supernote list-models' to see available models)"
+        help="Model to use. Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
+             "google:gemini-2.5-pro, ollama:qwen2.5-vl:7b) or shortcuts: "
+             "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama"
     )
     pdf_parser.add_argument(
         "--temperature", type=float, default=0.2, help="Generation temperature (default: 0.2)"

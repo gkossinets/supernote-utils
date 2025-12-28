@@ -24,9 +24,8 @@ def transcribe_pdf_file(args):
 
         # Create provider
         provider = create_provider(
-            provider_name=args.api,
+            model_spec=args.model,
             config=provider_config,
-            model=args.model if hasattr(args, 'model') and args.model else None,
             temperature=args.temperature,
         )
 
@@ -67,14 +66,20 @@ Environment Variables:
   (Ollama requires local installation at http://localhost:11434)
 
 Examples:
-  # Process with Claude Sonnet
-  %(prog)s input.pdf --api claude-sonnet --temperature 0.2
+  # Process with Claude Sonnet (default)
+  %(prog)s input.pdf -o output.md
 
-  # Process with Gemini and save as plain text
-  %(prog)s input.pdf --api gemini --plain-text -o result.txt
+  # Process with Gemini Flash
+  %(prog)s input.pdf -m gemini-flash -o result.md
+
+  # Process with specific Google model
+  %(prog)s input.pdf -m google:gemini-2.5-pro --temperature 0.3 -o result.md
 
   # Process with Ollama local model
-  %(prog)s input.pdf --api ollama --model llama3.2-vision:11b -o result.md
+  %(prog)s input.pdf -m ollama:llama3.2-vision:11b -o result.md
+
+  # Output plain text
+  %(prog)s input.pdf -m claude --plain-text -o result.txt
         """,
     )
 
@@ -88,22 +93,11 @@ Examples:
     )
 
     parser.add_argument(
-        "--api",
-        choices=[
-            "claude",
-            "claude-haiku",
-            "claude-sonnet",
-            "gemini",
-            "gemini-flash",
-            "gemini-pro",
-            "ollama",
-        ],
+        "-m", "--model",
         default="claude-sonnet",
-        help="LLM API service to use (default: claude-sonnet)",
-    )
-
-    parser.add_argument(
-        "--model", type=str, default=None, help="Specific model name to use (optional)"
+        help="Model to use. Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
+             "google:gemini-2.5-pro, ollama:qwen2.5-vl:7b) or shortcuts: "
+             "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama"
     )
 
     parser.add_argument(

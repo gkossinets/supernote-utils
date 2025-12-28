@@ -43,6 +43,7 @@ test/results/
 test/output.md
 test-output-*.md
 test_*.txt
+test/*.pdf
 
 # Development and implementation notes
 IMPLEMENTATION_SUMMARY*.md

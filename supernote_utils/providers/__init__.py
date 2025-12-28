@@ -15,23 +15,93 @@ __all__ = [
     "GoogleProvider",
     "OllamaProvider",
     "create_provider",
+    "parse_model_spec",
 ]
 
 
+def parse_model_spec(model_spec: str) -> tuple[str, Optional[str], dict]:
+    """
+    Parse model specification into (provider, model_name, options).
+
+    Accepts formats:
+    - Explicit: "anthropic:claude-3-opus-20240229", "google:gemini-2.5-pro", "ollama:qwen2.5-vl:7b"
+    - Shortcuts: "claude", "claude-sonnet", "claude-haiku", "gemini", "gemini-flash", "gemini-pro", "ollama"
+
+    Args:
+        model_spec: Model specification string
+
+    Returns:
+        Tuple of (provider_name, model_name, options_dict)
+        - provider_name: "anthropic", "google", or "ollama"
+        - model_name: Specific model or None for provider default
+        - options_dict: Additional options like {"use_sonnet": True}
+
+    Raises:
+        ConfigurationError: If model_spec format is invalid
+    """
+    # Shortcuts mapping: shortcut -> (provider, model, options)
+    shortcuts = {
+        "claude": ("anthropic", None, {"use_sonnet": True}),
+        "claude-sonnet": ("anthropic", None, {"use_sonnet": True}),
+        "claude-haiku": ("anthropic", None, {"use_sonnet": False}),
+        "gemini": ("google", "gemini-2.5-pro-preview-06-05", {"use_pro": True}),
+        "gemini-flash": ("google", "gemini-2.5-flash-preview-05-20", {"use_pro": False}),
+        "gemini-pro": ("google", "gemini-2.5-pro-preview-06-05", {"use_pro": True}),
+        "ollama": ("ollama", None, {}),
+    }
+
+    model_spec_lower = model_spec.lower()
+
+    # Check for shortcut first
+    if model_spec_lower in shortcuts:
+        return shortcuts[model_spec_lower]
+
+    # Check for explicit provider:model format
+    if ":" in model_spec:
+        # Split only on first colon (ollama models can have colons like "qwen2.5-vl:7b")
+        parts = model_spec.split(":", 1)
+        provider = parts[0].lower()
+        model = parts[1] if len(parts) > 1 and parts[1] else None
+
+        # Validate provider
+        valid_providers = ["anthropic", "google", "ollama"]
+        if provider not in valid_providers:
+            raise ConfigurationError(
+                f"Unknown provider: '{provider}'. "
+                f"Valid providers: {', '.join(valid_providers)}"
+            )
+
+        # Set default options based on provider
+        options = {}
+        if provider == "anthropic":
+            options["use_sonnet"] = True  # Default to sonnet behavior
+        elif provider == "google":
+            options["use_pro"] = "pro" in (model or "").lower()
+
+        return (provider, model, options)
+
+    # No colon and not a shortcut - invalid format
+    raise ConfigurationError(
+        f"Invalid model specification: '{model_spec}'. "
+        f"Use 'provider:model' format (e.g., 'anthropic:claude-3-opus-20240229', "
+        f"'google:gemini-2.5-pro', 'ollama:qwen2.5-vl:7b') "
+        f"or a shortcut: claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama"
+    )
+
+
 def create_provider(
-    provider_name: str,
+    model_spec: str,
     config: Optional[ProviderConfig] = None,
-    model: Optional[str] = None,
     temperature: float = 0.2,
 ) -> VisionProvider:
     """
     Factory function to create appropriate vision provider.
 
     Args:
-        provider_name: Name of provider (claude, claude-haiku, claude-sonnet,
-                      gemini, gemini-flash, gemini-pro, ollama)
+        model_spec: Model specification in "provider:model" format or shortcut
+                   Examples: "anthropic:claude-3-opus-20240229", "google:gemini-2.5-pro",
+                            "ollama:qwen2.5-vl:7b", "claude-sonnet", "gemini-flash"
         config: Provider configuration (uses defaults if None)
-        model: Specific model override
         temperature: Generation temperature
 
     Returns:
@@ -43,45 +113,33 @@ def create_provider(
     if config is None:
         config = ProviderConfig.from_env()
 
-    provider_name = provider_name.lower()
+    # Parse the model specification
+    provider_name, model, options = parse_model_spec(model_spec)
 
-    # Anthropic providers
-    if provider_name in ["claude", "claude-haiku", "claude-sonnet"]:
-        use_sonnet = provider_name == "claude-sonnet"
-        model_override = model or config.anthropic_model
-
+    # Create appropriate provider
+    if provider_name == "anthropic":
         return AnthropicProvider(
             api_key=config.anthropic_api_key,
-            model=model_override,
+            model=model,
             temperature=temperature,
-            use_sonnet=use_sonnet,
+            use_sonnet=options.get("use_sonnet", True),
         )
 
-    # Google providers
-    elif provider_name in ["gemini", "gemini-flash", "gemini-pro"]:
-        use_pro = provider_name == "gemini-pro"
-        model_override = model or config.google_model
-
+    elif provider_name == "google":
         return GoogleProvider(
             api_key=config.google_api_key,
-            model=model_override,
+            model=model,
             temperature=temperature,
-            use_pro=use_pro,
+            use_pro=options.get("use_pro", False),
         )
 
-    # Ollama provider
     elif provider_name == "ollama":
-        model_override = model or config.ollama_model
-
         return OllamaProvider(
-            model=model_override,
+            model=model,
             temperature=temperature,
             base_url=config.ollama_base_url,
         )
 
     else:
-        raise ConfigurationError(
-            f"Unsupported provider: {provider_name}. "
-            f"Supported: claude, claude-haiku, claude-sonnet, "
-            f"gemini, gemini-flash, gemini-pro, ollama"
-        )
+        # This shouldn't happen if parse_model_spec validates correctly
+        raise ConfigurationError(f"Unsupported provider: {provider_name}")
