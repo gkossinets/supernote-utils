@@ -11,6 +11,13 @@ import sys
 from supernote_utils.__version__ import __version__
 
 
+class TemperatureAction(argparse.Action):
+    """Custom action to track when temperature is explicitly set"""
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
+        setattr(namespace, '_temperature_was_set', True)
+
+
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
@@ -106,7 +113,8 @@ examples:
         type=float,
         default=0.2,
         metavar="FLOAT",
-        help="LLM generation temperature controlling randomness (default: 0.2). "
+        action=TemperatureAction,
+        help="LLM generation temperature controlling randomness (default: 0.2, but 1.0 for Gemini 3 models). "
              "Lower values (0.0-0.2) are more deterministic and reduce hallucinations. "
              "Range: 0.0 to 2.0"
     )
@@ -177,7 +185,8 @@ examples:
         type=float,
         default=0.2,
         metavar="FLOAT",
-        help="LLM generation temperature controlling randomness (default: 0.2). "
+        action=TemperatureAction,
+        help="LLM generation temperature controlling randomness (default: 0.2, but 1.0 for Gemini 3 models). "
              "Lower values (0.0-0.2) are more deterministic and reduce hallucinations. "
              "Range: 0.0 to 2.0"
     )

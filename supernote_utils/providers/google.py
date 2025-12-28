@@ -21,12 +21,18 @@ class GoogleProvider(VisionProvider):
     DEFAULT_PRO_MODEL = "gemini-2.5-pro"
     DEFAULT_FLASH_MODEL = "gemini-2.5-flash"
 
+    @staticmethod
+    def _is_reasoning_model(model_name: str) -> bool:
+        """Check if model is a Gemini 3 reasoning model requiring temperature 1.0"""
+        return model_name.lower().startswith("gemini-3")
+
     def __init__(
         self,
         api_key: str,
         model: Optional[str] = None,
         temperature: float = 0.2,
         use_pro: bool = False,
+        temperature_was_set: bool = False,
     ):
         """
         Initialize Google Gemini provider.
@@ -54,7 +60,25 @@ class GoogleProvider(VisionProvider):
         else:
             self.actual_model = self.DEFAULT_PRO_MODEL if use_pro else self.DEFAULT_FLASH_MODEL
 
-        super().__init__(model=self.actual_model, temperature=temperature)
+        # Auto-adjust temperature for Gemini 3 reasoning models
+        adjusted_temperature = temperature
+        if self._is_reasoning_model(self.actual_model):
+            if not temperature_was_set:
+                # User didn't set temperature, auto-adjust to 1.0
+                adjusted_temperature = 1.0
+                print(
+                    f"Note: Using temperature=1.0 for Gemini 3 reasoning model (recommended)",
+                    file=sys.stderr,
+                )
+            elif temperature < 1.0:
+                # User explicitly set temperature below 1.0
+                print(
+                    f"Warning: Gemini 3 models perform best at temperature=1.0. "
+                    f"Using {temperature} may cause degraded output.",
+                    file=sys.stderr,
+                )
+
+        super().__init__(model=self.actual_model, temperature=adjusted_temperature)
 
         # Configure and create client
         genai.configure(api_key=api_key)
@@ -238,6 +262,7 @@ class GoogleProvider(VisionProvider):
 
         # Return known Gemini vision models (static fallback)
         return [
+            "gemini-3-flash-preview",
             cls.DEFAULT_PRO_MODEL,
             cls.DEFAULT_FLASH_MODEL,
             "gemini-2.0-flash-exp",

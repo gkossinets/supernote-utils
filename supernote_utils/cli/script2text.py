@@ -13,6 +13,13 @@ from supernote_utils.providers import create_provider
 from supernote_utils.sources.pdf import PDFFileHandler
 
 
+class TemperatureAction(argparse.Action):
+    """Custom action to track when temperature is explicitly set"""
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
+        setattr(namespace, '_temperature_was_set', True)
+
+
 def transcribe_pdf_file(args):
     """Handle PDF transcription from CLI args"""
     try:
@@ -22,11 +29,15 @@ def transcribe_pdf_file(args):
         # Create provider configuration
         provider_config = ProviderConfig.from_env()
 
+        # Check if temperature was explicitly set (not default 0.2)
+        temperature_was_set = hasattr(args, '_temperature_was_set') and args._temperature_was_set
+
         # Create provider
         provider = create_provider(
             model_spec=args.model,
             config=provider_config,
             temperature=args.temperature,
+            temperature_was_set=temperature_was_set,
         )
 
         # Create transcription config
@@ -104,7 +115,8 @@ Examples:
         "--temperature",
         type=float,
         default=0.2,
-        help="Temperature for generation (0.0-2.0, default: 0.2)",
+        action=TemperatureAction,
+        help="Temperature for generation (default: 0.2, but 1.0 for Gemini 3 models). Range: 0.0-2.0",
     )
 
     parser.add_argument(

@@ -46,6 +46,7 @@ def parse_model_spec(model_spec: str) -> tuple[str, Optional[str], dict]:
         "claude-haiku": ("anthropic", None, {"use_sonnet": False}),
         "gemini": ("google", "gemini-3-pro-preview", {"use_pro": True}),
         "gemini-flash": ("google", "gemini-3-flash-preview", {"use_pro": False}),
+        "gemini-3-flash": ("google", "gemini-3-flash-preview", {"use_pro": False}),
         "gemini-pro": ("google", "gemini-3-pro-preview", {"use_pro": True}),
         "ollama": ("ollama", None, {}),
     }
@@ -93,6 +94,7 @@ def create_provider(
     model_spec: str,
     config: Optional[ProviderConfig] = None,
     temperature: float = 0.2,
+    temperature_was_set: bool = False,
 ) -> VisionProvider:
     """
     Factory function to create appropriate vision provider.
@@ -103,6 +105,7 @@ def create_provider(
                             "ollama:qwen2.5-vl:7b", "claude-sonnet", "gemini-flash"
         config: Provider configuration (uses defaults if None)
         temperature: Generation temperature
+        temperature_was_set: Whether temperature was explicitly set by user (vs using default)
 
     Returns:
         Configured VisionProvider instance
@@ -131,6 +134,7 @@ def create_provider(
             model=model,
             temperature=temperature,
             use_pro=options.get("use_pro", False),
+            temperature_was_set=temperature_was_set,
         )
 
     elif provider_name == "ollama":
