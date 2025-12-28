@@ -100,11 +100,11 @@ supernote list-models
 ### Convert .note Files to Markdown
 
 ```bash
-# Basic usage with Claude Sonnet (default)
+# Basic usage with Gemini Flash (default)
 supernote transcribe note input.note -o output.md
 
-# Use Gemini with shortcut
-supernote transcribe note input.note -o output.md -m gemini-flash
+# Use Claude Sonnet model
+supernote transcribe note input.note -o output.md -m claude-sonnet
 
 # Use specific Gemini model
 supernote transcribe note input.note -o output.md -m google:gemini-3-pro-preview --temperature 0.2
@@ -125,10 +125,13 @@ supernote transcribe note input.note -o output.md --page-separator
 ### Convert PDF to Markdown
 
 ```bash
-# Transcribe scanned PDF (batch processing enabled by default)
+# Transcribe scanned PDF with Gemini Flash (default)
 supernote transcribe pdf input.pdf -o output.md
 
-# Use different model and temperature
+# Use Claude Sonnet model
+supernote transcribe pdf input.pdf -m claude-sonnet -o output.md
+
+# Use Gemini Pro with custom temperature
 supernote transcribe pdf input.pdf -m gemini-pro --temperature 0.3 -o output.md
 
 # Use specific Google model
@@ -201,10 +204,10 @@ supernote list-models
 Use either shortcuts or explicit `provider:model` format:
 
 **Shortcuts:**
+- `gemini-flash` → Gemini 3 Flash (default - fast, free tier available)
+- `gemini`, `gemini-pro` → Gemini 3 Pro (powerful, high accuracy)
 - `claude`, `claude-sonnet` → Claude Sonnet 4.5 (powerful, high accuracy)
 - `claude-haiku` → Claude Haiku 4.5 (faster, cost-effective)
-- `gemini`, `gemini-pro` → Gemini 3 Pro (powerful, high accuracy)
-- `gemini-flash` → Gemini 3 Flash (fast, free tier available)
 - `ollama` → Auto-detected local vision model
 
 **Explicit provider:model format:**

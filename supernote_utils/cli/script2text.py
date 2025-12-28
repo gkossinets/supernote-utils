@@ -66,14 +66,14 @@ Environment Variables:
   (Ollama requires local installation at http://localhost:11434)
 
 Examples:
-  # Process with Claude Sonnet (default)
+  # Process with Gemini Flash (default)
   %(prog)s input.pdf -o output.md
 
-  # Process with Gemini Flash
-  %(prog)s input.pdf -m gemini-flash -o result.md
+  # Process with Claude Sonnet
+  %(prog)s input.pdf -m claude-sonnet -o result.md
 
   # Process with specific Google model
-  %(prog)s input.pdf -m google:gemini-2.5-pro --temperature 0.3 -o result.md
+  %(prog)s input.pdf -m google:gemini-3-pro-preview --temperature 0.3 -o result.md
 
   # Process with Ollama local model
   %(prog)s input.pdf -m ollama:llama3.2-vision:11b -o result.md
@@ -94,9 +94,9 @@ Examples:
 
     parser.add_argument(
         "-m", "--model",
-        default="claude-sonnet",
-        help="Model to use. Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
-             "google:gemini-2.5-pro, ollama:qwen2.5-vl:7b) or shortcuts: "
+        default="gemini-flash",
+        help="Model to use (default: gemini-flash). Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
+             "google:gemini-3-pro-preview, ollama:qwen2.5-vl:7b) or shortcuts: "
              "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama"
     )
 

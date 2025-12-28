@@ -27,11 +27,11 @@ examples:
   # List available models
   supernote list-models
 
-  # Transcribe a .note file
+  # Transcribe a .note file (uses Gemini Flash by default)
   supernote transcribe note input.note -o output.md
 
-  # Transcribe a PDF with custom settings
-  supernote transcribe pdf input.pdf -o output.md -m gemini-flash --batch-size 10
+  # Transcribe a PDF with Claude Sonnet and custom batch size
+  supernote transcribe pdf input.pdf -o output.md -m claude-sonnet --batch-size 10
 
   # Convert .note to PDF
   supernote convert note2pdf input.note output.pdf
@@ -66,14 +66,14 @@ for more help on a specific command:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
-  # Basic usage with default Claude Sonnet model
+  # Basic usage with default Gemini Flash model
   supernote transcribe note input.note -o output.md
 
-  # Use Gemini Flash model with batch processing
-  supernote transcribe note input.note -o output.md -m gemini-flash --batch-size 10
+  # Use Claude Sonnet model
+  supernote transcribe note input.note -o output.md -m claude-sonnet
 
-  # Use specific model with custom temperature
-  supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1
+  # Use specific model with custom temperature and batch size
+  supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1 --batch-size 10
 
   # Generate both markdown and PDF output
   supernote transcribe note input.note -o output.md --pdf output.pdf
@@ -93,11 +93,11 @@ examples:
     )
     note_parser.add_argument(
         "-m", "--model",
-        default="claude-sonnet",
+        default="gemini-flash",
         metavar="MODEL",
-        help="Model to use for transcription (default: claude-sonnet). "
+        help="Model to use for transcription (default: gemini-flash). "
              "Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
-             "google:gemini-2.5-pro, ollama:qwen2.5-vl:7b) or use shortcuts: "
+             "google:gemini-3-pro-preview, ollama:qwen2.5-vl:7b) or use shortcuts: "
              "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama. "
              "Run 'supernote list-models' to see all available models"
     )
@@ -137,11 +137,11 @@ examples:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
-  # Basic usage with default Claude Sonnet model
+  # Basic usage with default Gemini Flash model
   supernote transcribe pdf input.pdf -o output.md
 
-  # Use Gemini Flash with batch processing
-  supernote transcribe pdf input.pdf -o output.md -m gemini-flash --batch-size 10
+  # Use Claude Sonnet model
+  supernote transcribe pdf input.pdf -o output.md -m claude-sonnet
 
   # Output plain text instead of markdown
   supernote transcribe pdf input.pdf -o output.txt --plain-text
@@ -164,11 +164,11 @@ examples:
     )
     pdf_parser.add_argument(
         "-m", "--model",
-        default="claude-sonnet",
+        default="gemini-flash",
         metavar="MODEL",
-        help="Model to use for transcription (default: claude-sonnet). "
+        help="Model to use for transcription (default: gemini-flash). "
              "Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
-             "google:gemini-2.5-pro, ollama:qwen2.5-vl:7b) or use shortcuts: "
+             "google:gemini-3-pro-preview, ollama:qwen2.5-vl:7b) or use shortcuts: "
              "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama. "
              "Run 'supernote list-models' to see all available models"
     )
