@@ -33,7 +33,7 @@ def transcribe_pdf_file(args):
         transcription_config = TranscriptionConfig(
             temperature=args.temperature,
             page_separator=args.page_separator if hasattr(args, 'page_separator') else False,
-            batch_size=args.batch_size if hasattr(args, 'batch_size') else 10,
+            batch_size=args.batch_size if hasattr(args, 'batch_size') else 3,
         )
 
         # Extract images from PDF
@@ -133,8 +133,8 @@ Examples:
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=10,
-        help="Number of pages to process in a single API call (default: 10, use 1 to disable batching)",
+        default=3,
+        help="Number of pages to process in a single API call (default: 3, use 1 to disable batching)",
     )
 
     args = parser.parse_args()

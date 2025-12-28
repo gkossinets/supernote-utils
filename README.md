@@ -140,14 +140,14 @@ supernote transcribe pdf input.pdf -m google:gemini-3-pro-preview -o output.md
 # Output plain text (strip Markdown formatting)
 supernote transcribe pdf input.pdf -m claude --plain-text -o output.txt
 
-# Adjust batch size for multi-page processing (default: 10)
+# Adjust batch size for multi-page processing (default: 3)
 supernote transcribe pdf input.pdf --batch-size 5 -o output.md
 
 # Disable batch processing (process one page at a time)
 supernote transcribe pdf input.pdf --batch-size 1 -o output.md
 ```
 
-**Batch Processing:** By default, `script2text` processes multiple pages in a single API call (10 pages per batch). This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
+**Batch Processing:** By default, pages are processed in batches of 3 in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
 
 ### Generate PDF from .note File
 

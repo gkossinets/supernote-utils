@@ -31,7 +31,7 @@ examples:
   supernote transcribe note input.note -o output.md
 
   # Transcribe a PDF with Claude Sonnet and custom batch size
-  supernote transcribe pdf input.pdf -o output.md -m claude-sonnet --batch-size 10
+  supernote transcribe pdf input.pdf -o output.md -m claude-sonnet --batch-size 5
 
   # Convert .note to PDF
   supernote convert note2pdf input.note output.pdf
@@ -73,7 +73,7 @@ examples:
   supernote transcribe note input.note -o output.md -m claude-sonnet
 
   # Use specific model with custom temperature and batch size
-  supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1 --batch-size 10
+  supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1 --batch-size 5
 
   # Generate both markdown and PDF output
   supernote transcribe note input.note -o output.md --pdf output.pdf
@@ -113,9 +113,9 @@ examples:
     note_parser.add_argument(
         "--batch-size",
         type=int,
-        default=10,
+        default=3,
         metavar="N",
-        help="Number of pages to process in a single API call (default: 10). "
+        help="Number of pages to process in a single API call (default: 3). "
              "Larger batches are faster and more cost-effective. "
              "Use 1 to disable batching and process pages individually"
     )
@@ -184,9 +184,9 @@ examples:
     pdf_parser.add_argument(
         "--batch-size",
         type=int,
-        default=10,
+        default=3,
         metavar="N",
-        help="Number of pages to process in a single API call (default: 10). "
+        help="Number of pages to process in a single API call (default: 3). "
              "Larger batches are faster and more cost-effective. "
              "Use 1 to disable batching and process pages individually"
     )
