@@ -4,9 +4,9 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 
 ## Features
 
-- **Direct .note to Markdown transcription** using LLM vision APIs (Claude, Gemini, Ollama)
-- **PDF to Markdown transcription** for scanned handwritten documents
-- **Batch processing** for multi-page PDFs (faster, more cost-effective)
+- **Universal file transcription** with auto-format detection (.note, .pdf, .png, .jpg, .jpeg, .webp)
+- **LLM vision APIs** support (Claude, Gemini, Ollama)
+- **Batch processing** for multi-page documents (faster, more cost-effective)
 - **Temperature control** for deterministic transcription (reduce hallucinations)
 - **Local LLM support** via Ollama (privacy-focused, no API costs)
 - **Comprehensive test suite** for comparing transcription quality across models
@@ -48,7 +48,7 @@ pip install -e ".[dev]"
 
 ### System Dependencies
 
-For PDF rendering support (required for `script2text` and PDF output):
+For PDF rendering support (required for PDF transcription and PDF output):
 
 ```bash
 # On macOS:
@@ -97,57 +97,53 @@ supernote list-models
 # This will show available models from Claude, Gemini, and Ollama
 ```
 
-### Convert .note Files to Markdown
+### Supported Formats
+
+| Format | Extension | Multi-page | Notes |
+|--------|-----------|------------|-------|
+| Supernote | .note | Yes | Native Supernote format |
+| PDF | .pdf | Yes | Scanned or exported PDFs |
+| PNG | .png | No | Single image |
+| JPEG | .jpg, .jpeg | No | Single image |
+| WebP | .webp | No | Single image |
+
+### Transcribe Files to Markdown
+
+The `supernote transcribe` command automatically detects the file format and processes it accordingly:
 
 ```bash
-# Basic usage with Gemini Flash (default)
-supernote transcribe note input.note -o output.md
+# Basic usage with Gemini Flash (default) - works with any supported format
+supernote transcribe input.note -o output.md
+supernote transcribe input.pdf -o output.md
+supernote transcribe photo.png -o output.md
+supernote transcribe scan.jpg -o output.md
 
 # Use Claude Sonnet model
-supernote transcribe note input.note -o output.md -m claude-sonnet
+supernote transcribe input.note -o output.md -m claude-sonnet
 
-# Use specific Gemini model
-supernote transcribe note input.note -o output.md -m google:gemini-3-pro-preview --temperature 0.2
+# Use specific Gemini model with custom temperature
+supernote transcribe input.pdf -o output.md -m google:gemini-3-pro-preview --temperature 0.2
 
 # Use local Ollama model
-supernote transcribe note input.note -o output.md -m ollama:qwen2.5-vl:7b
+supernote transcribe input.note -o output.md -m ollama:qwen2.5-vl:7b
 
 # Use specific Anthropic model
-supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229
-
-# Generate both Markdown and PDF
-supernote transcribe note input.note -o output.md --pdf output.pdf
-
-# Add page separators
-supernote transcribe note input.note -o output.md --page-separator
-```
-
-### Convert PDF to Markdown
-
-```bash
-# Transcribe scanned PDF with Gemini Flash (default)
-supernote transcribe pdf input.pdf -o output.md
-
-# Use Claude Sonnet model
-supernote transcribe pdf input.pdf -m claude-sonnet -o output.md
-
-# Use Gemini Pro with custom temperature
-supernote transcribe pdf input.pdf -m gemini-pro --temperature 0.3 -o output.md
-
-# Use specific Google model
-supernote transcribe pdf input.pdf -m google:gemini-3-pro-preview -o output.md
+supernote transcribe input.pdf -o output.md -m anthropic:claude-3-opus-20240229
 
 # Output plain text (strip Markdown formatting)
-supernote transcribe pdf input.pdf -m claude --plain-text -o output.txt
+supernote transcribe input.pdf -m claude --plain-text -o output.txt
+
+# Generate both Markdown and PDF (.note files only)
+supernote transcribe input.note -o output.md --pdf output.pdf
 
 # Adjust batch size for multi-page processing (default: 3)
-supernote transcribe pdf input.pdf --batch-size 5 -o output.md
+supernote transcribe input.pdf --batch-size 5 -o output.md
 
 # Disable batch processing (process one page at a time)
-supernote transcribe pdf input.pdf --batch-size 1 -o output.md
+supernote transcribe input.note --batch-size 1 --page-separator -o output.md
 ```
 
-**Batch Processing:** By default, pages are processed in batches of 3 in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
+**Batch Processing:** By default, multi-page documents (.note, .pdf) are processed in batches of 3 pages in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
 
 ### Generate PDF from .note File
 

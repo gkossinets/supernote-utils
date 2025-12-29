@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "supernote-utils"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python utilities for managing and transcribing handwritten notes from Ratta Supernote tablets"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -59,8 +59,6 @@ dev = [
 
 [project.scripts]
 supernote = "supernote_utils.cli.main:main"
-note2text = "supernote_utils.cli.note2text:main"
-script2text = "supernote_utils.cli.script2text:main"
 note2pdf = "supernote_utils.cli.note2pdf:main"
 
 [project.urls]

@@ -34,18 +34,19 @@ examples:
   # List available models
   supernote list-models
 
-  # Transcribe a .note file (uses Gemini Flash by default)
-  supernote transcribe note input.note -o output.md
+  # Transcribe files (auto-detects format, uses Gemini Flash by default)
+  supernote transcribe input.note -o output.md
+  supernote transcribe input.pdf -o output.md
+  supernote transcribe photo.png -o output.md
 
-  # Transcribe a PDF with Claude Sonnet and custom batch size
-  supernote transcribe pdf input.pdf -o output.md -m claude-sonnet --batch-size 5
+  # Transcribe with Claude Sonnet and custom batch size
+  supernote transcribe input.pdf -o output.md -m claude-sonnet --batch-size 5
 
   # Convert .note to PDF
   supernote convert note2pdf input.note output.pdf
 
 for more help on a specific command:
-  supernote transcribe note --help
-  supernote transcribe pdf --help
+  supernote transcribe --help
   supernote convert note2pdf --help
         """
     )
@@ -60,117 +61,51 @@ for more help on a specific command:
 
     # Transcribe command
     transcribe_parser = subparsers.add_parser(
-        "transcribe", help="Transcribe handwritten notes to text"
-    )
-    transcribe_subparsers = transcribe_parser.add_subparsers(
-        dest="source_type", help="Input source type"
-    )
-
-    # Transcribe note
-    note_parser = transcribe_subparsers.add_parser(
-        "note",
-        help="Transcribe .note file to markdown",
+        "transcribe",
+        help="Transcribe handwritten notes to text (auto-detects format)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+supported formats:
+  .note          Supernote native format
+  .pdf           Scanned or exported PDFs
+  .png, .jpg     Single images
+  .jpeg, .webp   Single images
+
 examples:
-  # Basic usage with default Gemini Flash model
-  supernote transcribe note input.note -o output.md
+  # Basic usage with default Gemini Flash model (auto-detects format)
+  supernote transcribe input.note -o output.md
+  supernote transcribe input.pdf -o output.md
+  supernote transcribe photo.png -o output.md
 
   # Use Claude Sonnet model
-  supernote transcribe note input.note -o output.md -m claude-sonnet
+  supernote transcribe input.pdf -o output.md -m claude-sonnet
 
   # Use specific model with custom temperature and batch size
-  supernote transcribe note input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1 --batch-size 5
+  supernote transcribe input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1 --batch-size 5
 
-  # Generate both markdown and PDF output
-  supernote transcribe note input.note -o output.md --pdf output.pdf
-
-  # Process one page at a time (disable batching)
-  supernote transcribe note input.note -o output.md --batch-size 1 --page-separator
-        """
-    )
-    note_parser.add_argument(
-        "input",
-        help="Path to input Supernote .note file"
-    )
-    note_parser.add_argument(
-        "-o", "--output",
-        metavar="FILE",
-        help="Path to output markdown file (writes to stdout if not specified)"
-    )
-    note_parser.add_argument(
-        "-m", "--model",
-        default="gemini-flash",
-        metavar="MODEL",
-        help="Model to use for transcription (default: gemini-flash). "
-             "Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
-             "google:gemini-3-pro-preview, ollama:qwen2.5-vl:7b) or use shortcuts: "
-             "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama. "
-             "Run 'supernote list-models' to see all available models"
-    )
-    note_parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.2,
-        metavar="FLOAT",
-        action=TemperatureAction,
-        help="LLM generation temperature controlling randomness (default: 0.2, but 1.0 for Gemini 3 models). "
-             "Lower values (0.0-0.2) are more deterministic and reduce hallucinations. "
-             "Range: 0.0 to 2.0"
-    )
-    note_parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=3,
-        metavar="N",
-        help="Number of pages to process in a single API call (default: 3). "
-             "Larger batches are faster and more cost-effective. "
-             "Use 1 to disable batching and process pages individually"
-    )
-    note_parser.add_argument(
-        "--page-separator",
-        action="store_true",
-        help="Insert page separator markers (---) between pages in the output"
-    )
-    note_parser.add_argument(
-        "--pdf",
-        metavar="FILE",
-        help="Also generate a PDF output file at the specified path"
-    )
-
-    # Transcribe PDF
-    pdf_parser = transcribe_subparsers.add_parser(
-        "pdf",
-        help="Transcribe PDF to markdown",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-examples:
-  # Basic usage with default Gemini Flash model
-  supernote transcribe pdf input.pdf -o output.md
-
-  # Use Claude Sonnet model
-  supernote transcribe pdf input.pdf -o output.md -m claude-sonnet
+  # Generate both markdown and PDF output (.note files only)
+  supernote transcribe input.note -o output.md --pdf output.pdf
 
   # Output plain text instead of markdown
-  supernote transcribe pdf input.pdf -o output.txt --plain-text
+  supernote transcribe input.pdf -o output.txt --plain-text
 
-  # Force rendering with custom DPI (for PDFs without embedded images)
-  supernote transcribe pdf input.pdf -o output.md --force-render --dpi 200
+  # Force rendering with custom DPI (PDF files only)
+  supernote transcribe input.pdf -o output.md --force-render --dpi 200
 
   # Process one page at a time (disable batching)
-  supernote transcribe pdf input.pdf -o output.md --batch-size 1
+  supernote transcribe input.note -o output.md --batch-size 1 --page-separator
         """
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "input",
-        help="Path to input PDF file"
+        help="Path to input file (.note, .pdf, .png, .jpg, .jpeg, .webp)"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "-o", "--output",
         metavar="FILE",
         help="Path to output markdown file (writes to stdout if not specified)"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "-m", "--model",
         default="gemini-flash",
         metavar="MODEL",
@@ -180,7 +115,7 @@ examples:
              "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama. "
              "Run 'supernote list-models' to see all available models"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "--temperature",
         type=float,
         default=0.2,
@@ -190,32 +125,41 @@ examples:
              "Lower values (0.0-0.2) are more deterministic and reduce hallucinations. "
              "Range: 0.0 to 2.0"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "--batch-size",
         type=int,
         default=3,
         metavar="N",
         help="Number of pages to process in a single API call (default: 3). "
              "Larger batches are faster and more cost-effective. "
-             "Use 1 to disable batching and process pages individually"
+             "Use 1 to disable batching and process pages individually. "
+             "Only applies to multi-page formats (.note, .pdf)"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "--page-separator",
         action="store_true",
-        help="Insert page separator markers (---) between pages in the output"
+        help="Insert page separator markers (---) between pages in the output. "
+             "Only applies to multi-page formats (.note, .pdf)"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "--plain-text",
         action="store_true",
         help="Output plain text by stripping all markdown formatting from the result"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
+        "--pdf",
+        metavar="FILE",
+        help="Also generate a PDF output file at the specified path. "
+             "Only supported for .note input files"
+    )
+    transcribe_parser.add_argument(
         "--force-render",
         action="store_true",
         help="Force rendering of PDF pages to images instead of extracting embedded images. "
-             "Useful for PDFs that don't have embedded images or have poor quality images"
+             "Useful for PDFs that don't have embedded images or have poor quality images. "
+             "Only applies to PDF input files"
     )
-    pdf_parser.add_argument(
+    transcribe_parser.add_argument(
         "--dpi",
         type=int,
         default=150,
@@ -223,6 +167,7 @@ examples:
         help="DPI (dots per inch) to use when rendering PDF pages to images (default: 150). "
              "Higher values produce better quality but larger images. "
              "Only used when --force-render is specified or when PDF has no embedded images. "
+             "Only applies to PDF input files. "
              "Recommended values: 150 (default), 200 (high quality), 300 (very high quality)"
     )
 
@@ -274,15 +219,8 @@ examples:
 
     # Route to appropriate handler
     if args.command == "transcribe":
-        if args.source_type == "note":
-            from supernote_utils.cli.note2text import transcribe_note_file
-            transcribe_note_file(args)
-        elif args.source_type == "pdf":
-            from supernote_utils.cli.script2text import transcribe_pdf_file
-            transcribe_pdf_file(args)
-        else:
-            transcribe_parser.print_help()
-            sys.exit(1)
+        from supernote_utils.cli.transcribe import transcribe_file
+        transcribe_file(args)
 
     elif args.command == "convert":
         if args.conversion_type == "note2pdf":
