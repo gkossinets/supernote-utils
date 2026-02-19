@@ -184,9 +184,13 @@ class AnthropicProvider(VisionProvider):
                 pass  # Fall back to static list
 
         # Return known Claude vision models (static fallback)
-        # List matches API response as of November 2025
+        # List matches API response as of February 2026
         return [
-            # Claude 4.5 (latest)
+            # Claude 4.6 (latest)
+            "claude-opus-4-6",
+            "claude-sonnet-4-6",
+            # Claude 4.5
+            "claude-opus-4-5-20251101",
             cls.DEFAULT_HAIKU_MODEL,   # claude-haiku-4-5-20251001
             cls.DEFAULT_SONNET_MODEL,  # claude-sonnet-4-5-20250929
             # Claude 4.1 / 4
