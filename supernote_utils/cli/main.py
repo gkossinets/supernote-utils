@@ -72,7 +72,7 @@ supported formats:
   .jpeg, .webp   Single images
 
 examples:
-  # Basic usage with default Gemini Flash model (auto-detects format)
+  # Basic usage with default Gemini Flash Latest model (auto-detects format)
   supernote transcribe input.note -o output.md
   supernote transcribe input.pdf -o output.md
   supernote transcribe photo.png -o output.md
@@ -107,9 +107,9 @@ examples:
     )
     transcribe_parser.add_argument(
         "-m", "--model",
-        default="gemini-flash",
+        default="gemini-flash-latest",
         metavar="MODEL",
-        help="Model to use for transcription (default: gemini-flash). "
+        help="Model to use for transcription (default: gemini-flash-latest). "
              "Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
              "google:gemini-3-pro-preview, ollama:qwen2.5-vl:7b) or use shortcuts: "
              "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama. "

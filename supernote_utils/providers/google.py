@@ -19,7 +19,7 @@ class GoogleProvider(VisionProvider):
 
     # Default models for different tiers
     DEFAULT_PRO_MODEL = "gemini-2.5-pro"
-    DEFAULT_FLASH_MODEL = "gemini-2.5-flash"
+    DEFAULT_FLASH_MODEL = "gemini-flash-latest"
 
     @staticmethod
     def _is_reasoning_model(model_name: str) -> bool:

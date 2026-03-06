@@ -292,7 +292,7 @@ class Transcriber:
             self.transcribe_images(images, output=output_stream, plain_text=plain_text)
 
             if output_path:
-                print(f"\nTranscription saved to: {output_path}", file=sys.stderr)
+                print(f"Transcription saved to: {output_path}\n", file=sys.stderr)
 
         finally:
             if output_path:
