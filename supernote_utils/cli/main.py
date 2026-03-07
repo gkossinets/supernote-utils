@@ -118,10 +118,10 @@ examples:
     transcribe_parser.add_argument(
         "--temperature",
         type=float,
-        default=0.2,
+        default=1.0,
         metavar="FLOAT",
         action=TemperatureAction,
-        help="LLM generation temperature controlling randomness (default: 0.2, but 1.0 for Gemini 3 models). "
+        help="LLM generation temperature controlling randomness (default: 1.0). "
              "Lower values (0.0-0.2) are more deterministic and reduce hallucinations. "
              "Range: 0.0 to 2.0"
     )

@@ -35,7 +35,7 @@ class OllamaProvider(VisionProvider):
     def __init__(
         self,
         model: Optional[str] = None,
-        temperature: float = 0.1,
+        temperature: float = 1.0,
         base_url: str = "http://localhost:11434",
     ):
         """
@@ -43,7 +43,7 @@ class OllamaProvider(VisionProvider):
 
         Args:
             model: Specific model name (None for auto-detection)
-            temperature: Generation temperature (default 0.1 for local models)
+            temperature: Generation temperature (default 1.0 for local models)
             base_url: Ollama server URL
         """
         if ollama is None:

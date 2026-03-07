@@ -94,7 +94,7 @@ def parse_model_spec(model_spec: str) -> tuple[str, Optional[str], dict]:
 def create_provider(
     model_spec: str,
     config: Optional[ProviderConfig] = None,
-    temperature: float = 0.2,
+    temperature: float = 1.0,
     temperature_was_set: bool = False,
 ) -> VisionProvider:
     """

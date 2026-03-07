@@ -27,7 +27,7 @@ class AnthropicProvider(VisionProvider):
         self,
         api_key: str,
         model: Optional[str] = None,
-        temperature: float = 0.2,
+        temperature: float = 1.0,
         use_sonnet: bool = True,
     ):
         """

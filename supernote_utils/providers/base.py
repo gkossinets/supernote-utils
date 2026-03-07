@@ -9,7 +9,7 @@ from PIL import Image
 class VisionProvider(ABC):
     """Abstract base class for vision LLM providers"""
 
-    def __init__(self, model: Optional[str] = None, temperature: float = 0.2):
+    def __init__(self, model: Optional[str] = None, temperature: float = 1.0):
         """
         Initialize provider.
 

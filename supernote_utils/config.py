@@ -9,7 +9,7 @@ from typing import Optional
 class TranscriptionConfig:
     """Configuration for transcription operations"""
 
-    temperature: float = 0.2
+    temperature: float = 1.0
     page_separator: bool = False
     additional_prompt: str = ""
     batch_size: int = 3
