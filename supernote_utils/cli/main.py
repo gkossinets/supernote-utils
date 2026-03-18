@@ -37,7 +37,7 @@ examples:
   # Transcribe files (auto-detects format, uses Gemini Flash by default)
   supernote transcribe input.note -o output.md
   supernote transcribe input.pdf -o output.md
-  supernote transcribe photo.png -o output.md
+  supernote transcribe -t markdown *.note -d transcribed/
 
   # Transcribe with Claude Sonnet and custom batch size
   supernote transcribe input.pdf -o output.md -m claude-sonnet --batch-size 5
@@ -72,10 +72,25 @@ supported formats:
   .jpeg, .webp   Single images
 
 examples:
-  # Basic usage with default Gemini Flash Latest model (auto-detects format)
+  # Single file — auto-detects format
   supernote transcribe input.note -o output.md
   supernote transcribe input.pdf -o output.md
   supernote transcribe photo.png -o output.md
+
+  # Multiple files → one output file per input (next to each input)
+  supernote transcribe *.note
+
+  # Multiple files → all outputs in a target directory
+  supernote transcribe -t markdown *.note -d transcribed/
+
+  # Multiple files → combined into a single output file
+  supernote transcribe *.note -o combined.md
+
+  # Plain-text output for all .note files into a directory
+  supernote transcribe -t plain-text *.note -d transcribed/
+
+  # Render .note files to PDF (no AI transcription)
+  supernote transcribe -t pdf *.note -d pdfs/
 
   # Use Claude Sonnet model
   supernote transcribe input.pdf -o output.md -m claude-sonnet
@@ -86,9 +101,6 @@ examples:
   # Generate both markdown and PDF output (.note files only)
   supernote transcribe input.note -o output.md --pdf output.pdf
 
-  # Output plain text instead of markdown
-  supernote transcribe input.pdf -o output.txt --plain-text
-
   # Force rendering with custom DPI (PDF files only)
   supernote transcribe input.pdf -o output.md --force-render --dpi 200
 
@@ -98,12 +110,31 @@ examples:
     )
     transcribe_parser.add_argument(
         "input",
-        help="Path to input file (.note, .pdf, .png, .jpg, .jpeg, .webp)"
+        nargs='+',
+        metavar="FILE",
+        help="Input file(s) to transcribe (.note, .pdf, .png, .jpg, .jpeg, .webp). "
+             "Multiple files or shell globs are accepted."
     )
     transcribe_parser.add_argument(
         "-o", "--output",
         metavar="FILE",
-        help="Path to output markdown file (writes to stdout if not specified)"
+        help="Write output to FILE. With multiple inputs, all transcriptions are combined "
+             "into this single file separated by '---'. Mutually exclusive with -d."
+    )
+    transcribe_parser.add_argument(
+        "-t", "--format",
+        choices=['markdown', 'plain-text', 'pdf'],
+        default='markdown',
+        metavar="FORMAT",
+        help="Output format: 'markdown' (default, .md), 'plain-text' (.txt), 'pdf' (.pdf). "
+             "For 'pdf', .note files are rendered visually without AI transcription."
+    )
+    transcribe_parser.add_argument(
+        "-d", "--directory",
+        metavar="DIR",
+        help="Write output files to DIR (created if it does not exist). "
+             "Output filenames are derived from input filenames with the appropriate extension. "
+             "Mutually exclusive with -o."
     )
     transcribe_parser.add_argument(
         "-m", "--model",
@@ -144,7 +175,7 @@ examples:
     transcribe_parser.add_argument(
         "--plain-text",
         action="store_true",
-        help="Output plain text by stripping all markdown formatting from the result"
+        help="Output plain text by stripping all markdown formatting (equivalent to -t plain-text)"
     )
     transcribe_parser.add_argument(
         "--pdf",
