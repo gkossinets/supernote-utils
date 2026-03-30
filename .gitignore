@@ -56,3 +56,4 @@ TODO
 # Temporary test scripts
 test_ollama_image.py
 check_encoding.py
+.coverage
