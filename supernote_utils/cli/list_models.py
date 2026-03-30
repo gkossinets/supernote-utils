@@ -14,7 +14,7 @@ from supernote_utils.providers.ollama import OllamaProvider
 def list_available_models(args):
     """List all available models from all providers in provider:model format"""
     print("Available Models:\n", file=sys.stderr)
-    print("Use these with: supernote transcribe note <file> -m <model>\n", file=sys.stderr)
+    print("Use these with: supernote transcribe <file> -m <model>\n", file=sys.stderr)
 
     # List Claude models
     print("Anthropic (Claude):", file=sys.stderr)
@@ -66,7 +66,8 @@ def list_available_models(args):
     print(file=sys.stderr)
 
     print("Examples:", file=sys.stderr)
-    print("  supernote transcribe note input.note -m claude-sonnet", file=sys.stderr)
-    print("  supernote transcribe note input.note -m anthropic:claude-3-opus-20240229", file=sys.stderr)
-    print("  supernote transcribe note input.note -m google:gemini-2.5-pro", file=sys.stderr)
-    print("  supernote transcribe note input.note -m ollama:qwen2.5-vl:7b", file=sys.stderr)
+    print("  supernote transcribe input.note -m claude-sonnet", file=sys.stderr)
+    print("  supernote transcribe input.note -m anthropic:claude-3-opus-20240229", file=sys.stderr)
+    print("  supernote transcribe input.note -m google:gemini-3-pro-preview", file=sys.stderr)
+    print("  supernote transcribe input.note -m ollama:qwen2.5-vl:7b", file=sys.stderr)
+    print("  supernote transcribe *.note -d transcribed/", file=sys.stderr)
