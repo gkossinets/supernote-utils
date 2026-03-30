@@ -148,7 +148,7 @@ supernote transcribe input.note --batch-size 1 --page-separator -o output.md
 ### Generate PDF from .note File
 
 ```bash
-supernote convert note2pdf input.note output.pdf
+supernote convert input.note -o output.pdf
 ```
 
 ## Temperature Settings

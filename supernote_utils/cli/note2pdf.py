@@ -14,7 +14,7 @@ def convert_note_to_pdf(args):
     """Handle note to PDF conversion from CLI args"""
     try:
         input_path = Path(args.input)
-        output_path = Path(args.output)
+        output_path = Path(args.output) if args.output else input_path.with_suffix(".pdf")
 
         NoteFileHandler.generate_pdf(input_path, output_path)
         print(f"Successfully converted '{input_path}' to '{output_path}'")

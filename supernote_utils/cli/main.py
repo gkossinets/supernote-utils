@@ -203,29 +203,25 @@ examples:
     )
 
     # Convert command
-    convert_parser = subparsers.add_parser("convert", help="Convert between formats")
-    convert_subparsers = convert_parser.add_subparsers(
-        dest="conversion_type", help="Conversion type"
-    )
-
-    # Note to PDF
-    note2pdf_parser = convert_subparsers.add_parser(
-        "note2pdf",
-        help="Convert .note file to PDF",
+    convert_parser = subparsers.add_parser(
+        "convert",
+        help="Convert a .note file to PDF",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
-  # Convert .note file to PDF
-  supernote convert note2pdf input.note output.pdf
+  supernote convert input.note -o output.pdf
+  supernote convert input.note          # writes input.pdf next to input.note
         """
     )
-    note2pdf_parser.add_argument(
+    convert_parser.add_argument(
         "input",
         help="Path to input Supernote .note file"
     )
-    note2pdf_parser.add_argument(
-        "output",
-        help="Path to output PDF file"
+    convert_parser.add_argument(
+        "-o", "--output",
+        metavar="FILE",
+        default=None,
+        help="Path to output PDF file (default: <input>.pdf)"
     )
 
     # List models command
@@ -254,12 +250,8 @@ examples:
         transcribe_file(args)
 
     elif args.command == "convert":
-        if args.conversion_type == "note2pdf":
-            from supernote_utils.cli.note2pdf import convert_note_to_pdf
-            convert_note_to_pdf(args)
-        else:
-            convert_parser.print_help()
-            sys.exit(1)
+        from supernote_utils.cli.note2pdf import convert_note_to_pdf
+        convert_note_to_pdf(args)
 
     elif args.command == "list-models":
         from supernote_utils.cli.list_models import list_available_models
