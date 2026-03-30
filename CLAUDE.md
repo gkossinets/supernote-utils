@@ -56,6 +56,10 @@ The package is structured as three independent layers that compose at the CLI la
 - `transcribe.py` — resolves model shortcut strings → provider instances → `Transcriber`
 - `list_models.py` — queries each provider for available models
 
+## Keeping README.md current
+
+After any change to CLI behaviour, defaults, flags, supported formats, or model shortcuts, update `README.md` to match. Specifically check: command examples, the Temperature Settings section, Model Calibration paths, the Supported Models shortcuts table, and the Project Structure tree.
+
 ## Provider/model string format
 
 The CLI accepts `provider:model` strings (e.g., `anthropic:claude-3-opus-20240229`) or shortcuts (`claude`, `gemini-flash`, `ollama`). Resolution logic lives in `transcribe.py`. When adding new models, update both the shortcut map there and `list_models.py`.
