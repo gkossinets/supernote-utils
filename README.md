@@ -9,7 +9,7 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 - **Batch processing** for multi-page documents (faster, more cost-effective)
 - **Temperature control** for deterministic transcription (reduce hallucinations)
 - **Local LLM support** via Ollama (privacy-focused, no API costs)
-- **Comprehensive test suite** for comparing transcription quality across models
+- **Model calibration scripts** for comparing transcription quality across models
 - **PDF generation** from .note files
 
 ## Installation
@@ -91,10 +91,7 @@ export GOOGLE_API_KEY="your-key-here"
 ### List Available Models
 
 ```bash
-# List all available models from all providers
 supernote list-models
-
-# This will show available models from Claude, Gemini, and Ollama
 ```
 
 ### Supported Formats
@@ -136,55 +133,61 @@ supernote transcribe input.pdf -m claude --plain-text -o output.txt
 # Generate both Markdown and PDF (.note files only)
 supernote transcribe input.note -o output.md --pdf output.pdf
 
-# Adjust batch size for multi-page processing (default: 3)
-supernote transcribe input.pdf --batch-size 5 -o output.md
+# Multiple files → individual outputs in a directory
+supernote transcribe -t markdown *.note -d transcribed/
+
+# Adjust batch size for multi-page processing (default: 5)
+supernote transcribe input.pdf --batch-size 10 -o output.md
 
 # Disable batch processing (process one page at a time)
 supernote transcribe input.note --batch-size 1 --page-separator -o output.md
 ```
 
-**Batch Processing:** By default, multi-page documents (.note, .pdf) are processed in batches of 3 pages in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
+**Batch Processing:** By default, multi-page documents (.note, .pdf) are processed in batches of 5 pages in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
 
 ### Generate PDF from .note File
 
 ```bash
 supernote convert input.note -o output.pdf
+supernote convert input.note          # writes input.pdf next to input.note
 ```
 
 ## Temperature Settings
 
-Temperature controls the randomness of LLM generation. For transcription:
+Temperature controls the randomness of LLM generation. The CLI default is `1.0`. For transcription work, lower values reduce hallucinations:
 
-- **0.0-0.2**: Very deterministic, minimal hallucinations (recommended for transcription)
-- **0.2-0.5**: Balanced, some flexibility for ambiguous handwriting
-- **0.5-1.0**: More creative, higher risk of hallucinations
+- **0.0–0.2**: Very deterministic, minimal hallucinations
+- **0.2–0.5**: Balanced, some flexibility for ambiguous handwriting
+- **0.5–1.0**: More creative, higher risk of hallucinations
 
-**Recommended defaults:**
-- Claude: 0.3
-- Gemini: 0.2
-- Ollama: 0.1
+**Recommended starting points for transcription:**
+- Claude: `--temperature 0.2`
+- Gemini: `--temperature 0.2`
+- Ollama: `--temperature 0.1`
 
-## Test Suite
+## Model Calibration
 
-Compare transcription quality across different models and temperature settings:
+The `misc/` directory contains scripts for comparing transcription quality across models and temperatures against a reference transcription:
 
 ```bash
-# Run full test suite
-python test_transcription.py
+# Run with all available models
+python misc/test_transcription2.py
 
-# Quick test with default configurations
-python test_transcription.py --quick
+# Quick run (one temperature per model)
+python misc/test_transcription2.py --quick
 
-# Custom test files
-python test_transcription.py --note my_test.note --reference my_reference.md
+# Custom reference files
+python misc/test_transcription2.py --note my_test.note --reference my_reference.md
 ```
 
-The test suite calculates:
+Requires the test dependencies: `pip install -e ".[test]"`
+
+Metrics calculated:
 - **WER (Word Error Rate)**: Percentage of word-level errors
 - **CER (Character Error Rate)**: Percentage of character-level errors
-- **BLEU Score**: N-gram overlap with reference (0-1, higher is better)
+- **BLEU Score**: N-gram overlap with reference (0–1, higher is better)
 - **Levenshtein Distance**: Raw edit distance
-- **Semantic Similarity**: Meaning similarity using sentence embeddings (0-1, higher is better)
+- **Semantic Similarity**: Meaning similarity using sentence embeddings (0–1, higher is better)
 
 Results are saved to `test/results/run_TIMESTAMP.md`
 
@@ -200,8 +203,9 @@ supernote list-models
 Use either shortcuts or explicit `provider:model` format:
 
 **Shortcuts:**
-- `gemini-flash` → Gemini 3 Flash (default - fast, free tier available)
+- `gemini-flash`, `gemini-flash-latest` → Gemini Flash Latest (default — fast, free tier available)
 - `gemini`, `gemini-pro` → Gemini 3 Pro (powerful, high accuracy)
+- `gemini-3-flash` → Gemini 3 Flash Preview
 - `claude`, `claude-sonnet` → Claude Sonnet 4.5 (powerful, high accuracy)
 - `claude-haiku` → Claude Haiku 4.5 (faster, cost-effective)
 - `ollama` → Auto-detected local vision model
@@ -217,8 +221,7 @@ Use either shortcuts or explicit `provider:model` format:
 # Google (Gemini)
 -m google:gemini-3-pro-preview
 -m google:gemini-3-flash-preview
--m google:gemini-2.0-flash-exp
--m google:gemini-1.5-pro
+-m google:gemini-flash-latest
 
 # Ollama (Local)
 -m ollama:qwen2.5-vl:7b
@@ -238,21 +241,21 @@ Use either shortcuts or explicit `provider:model` format:
 │   ├── providers/           # LLM provider implementations
 │   ├── sources/             # File source handlers
 │   └── note_format/         # Supernote .note file format parser
-├── test/                    # Test files
-│   ├── test.note            # Sample handwritten note
-│   ├── test-transcribed.md  # Reference transcription
-│   └── results/             # Test results
+├── test/                    # Unit tests and fixtures
+│   └── test.note            # Sample handwritten note (test fixture)
+├── misc/                    # Model calibration scripts and reference data
+│   ├── test_transcription2.py   # Model comparison script
+│   └── test-transcribed.md      # Reference transcription for calibration
 └── pyproject.toml           # Package configuration
 ```
 
 ## Tips for Best Results
 
-1. **Use deterministic temperature** (0.0-0.2) for consistent transcription
-2. **Test multiple models** - different models excel at different handwriting styles
-3. **Use the test suite** to find the best model/temperature for your handwriting
-4. **For multilingual content**, Claude Sonnet and Gemini Pro tend to perform best
-5. **For privacy-sensitive content**, use Ollama with local models
-6. **For scientific notation**, add custom instructions via `--add-prompt`
+1. **Lower the temperature** (`--temperature 0.2`) for consistent, hallucination-free transcription
+2. **Run the calibration script** (`misc/test_transcription2.py`) to find the best model for your handwriting
+3. **For multilingual content**, Claude Sonnet and Gemini Pro tend to perform best
+4. **For privacy-sensitive content**, use Ollama with local models
+5. **Test multiple models** — different models excel at different handwriting styles and languages
 
 ## License
 

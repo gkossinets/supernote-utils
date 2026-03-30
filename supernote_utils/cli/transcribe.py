@@ -35,7 +35,7 @@ def _build_provider(args):
 
 def _build_transcription_config(args, is_multipage: bool) -> TranscriptionConfig:
     """Create a TranscriptionConfig from CLI args."""
-    batch_size = args.batch_size if hasattr(args, 'batch_size') else 3
+    batch_size = args.batch_size if hasattr(args, 'batch_size') else 5
     if not is_multipage and batch_size > 1:
         batch_size = 1
     return TranscriptionConfig(

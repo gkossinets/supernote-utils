@@ -12,7 +12,7 @@ class TranscriptionConfig:
     temperature: float = 1.0
     page_separator: bool = False
     additional_prompt: str = ""
-    batch_size: int = 3
+    batch_size: int = 5
 
     def __post_init__(self):
         """Validate configuration"""

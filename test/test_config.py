@@ -12,7 +12,7 @@ class TestTranscriptionConfig:
         assert cfg.temperature == 1.0
         assert cfg.page_separator is False
         assert cfg.additional_prompt == ""
-        assert cfg.batch_size == 3
+        assert cfg.batch_size == 5
 
     def test_valid_temperature_boundaries(self):
         TranscriptionConfig(temperature=0.0)
