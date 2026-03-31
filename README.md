@@ -160,17 +160,21 @@ For all providers, values above 1.0 increase hallucination risk and are not reco
 
 ## Model Calibration
 
-The `misc/` directory contains scripts for comparing transcription quality across models and temperatures against a reference transcription:
+`misc/calibrate.py` compares transcription quality across models and temperatures against a reference transcription. Provide any supported input format (`.note`, `.pdf`, `.png`, etc.) and a ground truth text file.
 
 ```bash
-# Run with all available models
-python misc/test_transcription2.py
+# Default: use built-in test fixture (test/test.note vs misc/test-transcribed.md)
+python misc/calibrate.py
 
-# Quick run (one temperature per model)
-python misc/test_transcription2.py --quick
+# Quick run (one temperature per model, fewer API calls)
+python misc/calibrate.py --quick
 
-# Custom reference files
-python misc/test_transcription2.py --note my_test.note --reference my_reference.md
+# Custom input and reference
+python misc/calibrate.py --input scan.pdf --reference reference.md
+python misc/calibrate.py --input photo.png --reference ground_truth.txt
+
+# Ollama models only (no cloud API calls)
+python misc/calibrate.py --ollama-only
 ```
 
 Requires the test dependencies: `pip install -e ".[test]"`
@@ -182,7 +186,7 @@ Metrics calculated:
 - **Levenshtein Distance**: Raw edit distance
 - **Semantic Similarity**: Meaning similarity using sentence embeddings (0–1, higher is better)
 
-Results are saved to `test/results/run_TIMESTAMP.md`
+Results are saved to `misc/results/run_TIMESTAMP.md`
 
 ## Supported Models
 
@@ -228,7 +232,7 @@ Run `supernote list-models` to see what's available in your environment. Use eit
 ├── test/                    # Unit tests and fixtures
 │   └── test.note            # Sample handwritten note (test fixture)
 ├── misc/                    # Model calibration scripts and reference data
-│   ├── test_transcription2.py   # Model comparison script
+│   ├── calibrate.py             # Model comparison script
 │   └── test-transcribed.md      # Reference transcription for calibration
 └── pyproject.toml           # Package configuration
 ```
