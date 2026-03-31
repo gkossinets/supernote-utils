@@ -240,7 +240,7 @@ Run `supernote list-models` to see what's available in your environment. Use eit
 ## Tips for Best Results
 
 1. **Use the recommended temperature** for your provider (1.0 for Gemini, 0.7 for Claude, 0.5 for Ollama)
-2. **Run the calibration script** (`misc/test_transcription2.py`) to find the best model for your handwriting
+2. **Run the calibration script** (`misc/calibrate.py`) to find the best model for your handwriting
 3. **For multilingual content**, Claude Sonnet and Gemini Pro tend to perform best
 4. **For privacy-sensitive content**, use Ollama with local models
 5. **Test multiple models** — different models excel at different handwriting styles and languages
