@@ -17,7 +17,6 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 ### Requirements
 
 - Python 3.8 or higher
-- pip (Python package installer)
 
 ### Quick Install
 
@@ -87,12 +86,6 @@ export GOOGLE_API_KEY="your-key-here"
 ```
 
 ## Usage
-
-### List Available Models
-
-```bash
-supernote list-models
-```
 
 ### Supported Formats
 
@@ -193,14 +186,7 @@ Results are saved to `test/results/run_TIMESTAMP.md`
 
 ## Supported Models
 
-**To see all available models, run:**
-```bash
-supernote list-models
-```
-
-### Model Selection Format
-
-Use either shortcuts or explicit `provider:model` format:
+Run `supernote list-models` to see what's available in your environment. Use either shortcuts or explicit `provider:model` format:
 
 **Shortcuts:**
 - `gemini-flash`, `gemini-flash-latest` → Gemini Flash Latest (default — fast, free tier available)
@@ -229,7 +215,7 @@ Use either shortcuts or explicit `provider:model` format:
 -m ollama:llava:latest
 ```
 
-**Note:** Only models installed locally will be shown by `supernote list-models`
+**Note:** Only locally installed Ollama models appear in the output.
 
 ## Project Structure
 
