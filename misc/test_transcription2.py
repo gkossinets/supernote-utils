@@ -514,45 +514,43 @@ def main():
     if not args.ollama_only:
         if args.quick:
             test_configs.extend([
-                {'provider': 'claude-sonnet', 'temperature': 0.2},
-                {'provider': 'gemini-flash', 'temperature': 0.2},
+                {'provider': 'claude-sonnet', 'temperature': 0.7},
+                {'provider': 'gemini-flash', 'temperature': 1.0},
             ])
         else:
             test_configs.extend([
-                # Claude tests
-                {'provider': 'claude-sonnet', 'temperature': 0.0},
+                # Claude tests (recommended default: 0.7)
                 {'provider': 'claude-sonnet', 'temperature': 0.2},
                 {'provider': 'claude-sonnet', 'temperature': 0.5},
-                {'provider': 'claude-haiku', 'temperature': 0.0},
+                {'provider': 'claude-sonnet', 'temperature': 0.7},
                 {'provider': 'claude-haiku', 'temperature': 0.2},
                 {'provider': 'claude-haiku', 'temperature': 0.5},
+                {'provider': 'claude-haiku', 'temperature': 0.7},
                 
-                # Gemini tests
-                {'provider': 'gemini-flash', 'temperature': 0.0},
-                {'provider': 'gemini-flash', 'temperature': 0.2},
+                # Gemini tests (recommended default: 1.0 for Gemini 3)
                 {'provider': 'gemini-flash', 'temperature': 0.5},
-                {'provider': 'gemini-pro', 'temperature': 0.0},
-                {'provider': 'gemini-pro', 'temperature': 0.2},
+                {'provider': 'gemini-flash', 'temperature': 1.0},
                 {'provider': 'gemini-pro', 'temperature': 0.5},
+                {'provider': 'gemini-pro', 'temperature': 1.0},
             ])
     
     # Add Ollama tests
     if available_ollama_models:
         if args.quick:
-            # Just test each model at single temperature
+            # Just test each model at recommended temperature
             for model in available_ollama_models:
                 test_configs.append({
                     'provider': 'ollama',
                     'model': model,
-                    'temperature': 0.1
+                    'temperature': 0.5
                 })
         else:
             # Test each model at multiple temperatures
             for model in available_ollama_models:
                 test_configs.extend([
-                    {'provider': 'ollama', 'model': model, 'temperature': 0.1},
                     {'provider': 'ollama', 'model': model, 'temperature': 0.3},
                     {'provider': 'ollama', 'model': model, 'temperature': 0.5},
+                    {'provider': 'ollama', 'model': model, 'temperature': 0.7},
                 ])
     
     if not test_configs:

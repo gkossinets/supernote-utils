@@ -111,8 +111,8 @@ supernote transcribe scan.jpg -o output.md
 # Use Claude Sonnet model
 supernote transcribe input.note -o output.md -m claude-sonnet
 
-# Use specific Gemini model with custom temperature
-supernote transcribe input.pdf -o output.md -m google:gemini-3-pro-preview --temperature 0.2
+# Use Claude with recommended temperature
+supernote transcribe input.pdf -o output.md -m claude-sonnet --temperature 0.7
 
 # Use local Ollama model
 supernote transcribe input.note -o output.md -m ollama:qwen2.5-vl:7b
@@ -147,16 +147,16 @@ supernote convert input.note          # writes input.pdf next to input.note
 
 ## Temperature Settings
 
-Temperature controls the randomness of LLM generation. The CLI default is `1.0`. For transcription work, lower values reduce hallucinations:
+Temperature controls the randomness of LLM generation. The CLI default is `1.0`, which is the recommended value for Gemini 3 models. Different providers have different optimal settings for transcription:
 
-- **0.0–0.2**: Very deterministic, minimal hallucinations
-- **0.2–0.5**: Balanced, some flexibility for ambiguous handwriting
-- **0.5–1.0**: More creative, higher risk of hallucinations
+**Recommended defaults for transcription:**
+- **Gemini 3.x:** `1.0` (the default; do not lower — [Google recommends 1.0](https://ai.google.dev/gemini-api/docs/gemini-3#temperature) for reasoning models; lower values may cause looping or degraded output)
+- **Claude:** `--temperature 0.7` (balances determinism with flexibility for ambiguous handwriting)
+- **Ollama:** `--temperature 0.5` (local models benefit from some flexibility to handle ambiguity)
 
-**Recommended starting points for transcription:**
-- Claude: `--temperature 0.2`
-- Gemini: `--temperature 0.2`
-- Ollama: `--temperature 0.1`
+The code auto-adjusts Gemini 3 models to temperature 1.0 unless you explicitly override it. If you do override, a warning is displayed.
+
+For all providers, values above 1.0 increase hallucination risk and are not recommended for transcription.
 
 ## Model Calibration
 
@@ -237,7 +237,7 @@ Run `supernote list-models` to see what's available in your environment. Use eit
 
 ## Tips for Best Results
 
-1. **Lower the temperature** (`--temperature 0.2`) for consistent, hallucination-free transcription
+1. **Use the recommended temperature** for your provider (1.0 for Gemini, 0.7 for Claude, 0.5 for Ollama)
 2. **Run the calibration script** (`misc/test_transcription2.py`) to find the best model for your handwriting
 3. **For multilingual content**, Claude Sonnet and Gemini Pro tend to perform best
 4. **For privacy-sensitive content**, use Ollama with local models

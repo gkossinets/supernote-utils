@@ -96,7 +96,7 @@ examples:
   supernote transcribe input.pdf -o output.md -m claude-sonnet
 
   # Use specific model with custom temperature
-  supernote transcribe input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.1
+  supernote transcribe input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.7
 
   # Generate both markdown and PDF output (.note files only)
   supernote transcribe input.note -o output.md --pdf output.pdf
@@ -153,7 +153,7 @@ examples:
         metavar="FLOAT",
         action=TemperatureAction,
         help="LLM generation temperature controlling randomness (default: 1.0). "
-             "Lower values (0.0-0.2) are more deterministic and reduce hallucinations. "
+             "Recommended: 1.0 for Gemini 3, 0.7 for Claude, 0.5 for Ollama. "
              "Range: 0.0 to 2.0"
     )
     transcribe_parser.add_argument(
