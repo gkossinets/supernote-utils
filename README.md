@@ -191,7 +191,6 @@ Run `supernote list-models` to see what's available in your environment. Use eit
 **Shortcuts:**
 - `gemini-flash`, `gemini-flash-latest` → Gemini Flash Latest (default — fast, free tier available)
 - `gemini`, `gemini-pro` → Gemini 3 Pro (powerful, high accuracy)
-- `gemini-3-flash` → Gemini 3 Flash Preview
 - `claude`, `claude-sonnet` → Claude Sonnet 4.5 (powerful, high accuracy)
 - `claude-haiku` → Claude Haiku 4.5 (faster, cost-effective)
 - `ollama` → Auto-detected local vision model
@@ -206,7 +205,6 @@ Run `supernote list-models` to see what's available in your environment. Use eit
 
 # Google (Gemini)
 -m google:gemini-3-pro-preview
--m google:gemini-3-flash-preview
 -m google:gemini-flash-latest
 
 # Ollama (Local)
