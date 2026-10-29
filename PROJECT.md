@@ -22,6 +22,7 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - Proper nouns with diacritics: 5-10% error rate depending on model
 - Cyrillic content: higher error rates, model-dependent
 - PDF text extraction falls back to image rendering when no embedded images exist
+- Handwritten date headers: models misread year digits (2026 as 2020/2024) and may then shift the day or weekday to make the wrong date consistent. Mitigated by the date rule, the filename date hint, and the header check (below); not eliminated
 
 ---
 
@@ -35,6 +36,8 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 **BYOK (bring your own key)** — no bundled API credits. Provider keys come from env vars. Default model is `gemini-flash-latest` (best free-tier option).
 
 **Temperature default: 1.0** — set at the provider level; users can override with `--temperature`. Lower values (0.0–0.2) reduce hallucinations for transcription but add determinism tradeoffs.
+
+**Date headers (2026-10-29):** In a real journal corpus (~250 daily pages, Gemini Flash), about 11% of transcribed date headers had a wrong year, and in several the day or weekday had been shifted to agree with the misread year. The prompt's "Logic is Law" rule invited that reconciliation. Three changes: (1) a strict rule in the prompt to transcribe dates, times, and numbers digit by digit and never reconcile a date with its weekday, with "Logic is Law" limited to words; (2) `--date-hint` (default `auto`) passes the date from the input filename to the model as a hint, explicitly subordinate to clear handwriting; (3) after transcription, `core/dates.py` compares the first date in the output with the expected date and checks the weekday, printing warnings to stderr. The text is never corrected automatically, because late-night entries can legitimately carry the next day's date.
 
 **Batch processing default: 3 pages** — batching images into a single API call is faster and cheaper than per-page calls. Providers that support multi-image input handle this natively; others fall back to serial calls.
 

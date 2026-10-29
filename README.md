@@ -134,9 +134,14 @@ supernote transcribe input.pdf --batch-size 10 -o output.md
 
 # Disable batch processing (process one page at a time)
 supernote transcribe input.note --batch-size 1 --page-separator -o output.md
+
+# Give the expected header date explicitly (default: read it from the filename)
+supernote transcribe scan.pdf --date-hint 2026-09-20 -o output.md
 ```
 
 **Batch Processing:** By default, multi-page documents (.note, .pdf) are processed in batches of 5 pages in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
+
+**Date headers:** Vision models often misread the year in a handwritten date header (e.g. "2026" as "2020" or "2024"), and may then shift the day or weekday so the wrong date looks consistent. The prompt tells the model to transcribe dates digit by digit and never reconcile a date with its weekday. When an input filename contains a date (`Pages 20260920.note`, `scan 2026-09-20.pdf`), it is also given to the model as a hint, and after transcription the first date in the output is checked against it. Mismatches, and weekdays that don't fit their date, are printed as warnings on stderr; the transcription itself is never changed, since a late-night entry may genuinely be headed with the next day. Use `--date-hint YYYY-MM-DD` to set the date for every input, or `--date-hint off` to disable both the hint and the check.
 
 ### Generate PDF from .note File
 

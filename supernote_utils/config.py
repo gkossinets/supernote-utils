@@ -2,6 +2,7 @@
 
 import os
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Optional
 
 
@@ -13,6 +14,8 @@ class TranscriptionConfig:
     page_separator: bool = False
     additional_prompt: str = ""
     batch_size: int = 5
+    # Date the note's header is expected to carry; added to the prompt as a hint when set
+    expected_date: Optional[date] = None
 
     def __post_init__(self):
         """Validate configuration"""

@@ -4,10 +4,12 @@ Unified transcribe command handler
 """
 
 import sys
+from datetime import date
 from pathlib import Path
 from typing import List, Optional
 
 from supernote_utils.config import ProviderConfig, TranscriptionConfig
+from supernote_utils.core.dates import check_header_date, date_from_filename
 from supernote_utils.core.transcriber import Transcriber
 from supernote_utils.providers import create_provider
 from supernote_utils.sources import factory
@@ -33,7 +35,9 @@ def _build_provider(args):
     )
 
 
-def _build_transcription_config(args, is_multipage: bool) -> TranscriptionConfig:
+def _build_transcription_config(
+    args, is_multipage: bool, expected_date: Optional[date] = None
+) -> TranscriptionConfig:
     """Create a TranscriptionConfig from CLI args."""
     batch_size = args.batch_size if hasattr(args, 'batch_size') else 5
     if not is_multipage and batch_size > 1:
@@ -42,7 +46,44 @@ def _build_transcription_config(args, is_multipage: bool) -> TranscriptionConfig
         temperature=args.temperature,
         page_separator=args.page_separator if hasattr(args, 'page_separator') and is_multipage else False,
         batch_size=batch_size,
+        expected_date=expected_date,
     )
+
+
+def resolve_expected_date(date_hint: str, input_path: Path) -> Optional[date]:
+    """Resolve the --date-hint option for one input file.
+
+    Args:
+        date_hint: 'auto', 'off', or a date as YYYY-MM-DD (already validated by the parser).
+        input_path: The input file, whose name 'auto' reads the date from.
+
+    Returns:
+        The expected date, or None when the hint and the check should be skipped.
+    """
+    if date_hint == 'off':
+        return None
+    if date_hint == 'auto':
+        return date_from_filename(input_path)
+    return date.fromisoformat(date_hint)
+
+
+def _expected_date_for(args, input_path: Path) -> Optional[date]:
+    """Resolve the expected date for one input from CLI args, and log it when set."""
+    expected = resolve_expected_date(getattr(args, 'date_hint', 'auto'), input_path)
+    if expected:
+        print(f"Date hint: {expected.isoformat()}", file=sys.stderr)
+    return expected
+
+
+def _report_header_date(text: str, expected_date: Optional[date], input_path: Path) -> None:
+    """Warn on stderr when a transcription's date header does not match the expected date.
+
+    The transcription itself is left as the model wrote it; a person decides what is right.
+    """
+    if expected_date is None:
+        return
+    for message in check_header_date(text, expected_date):
+        print(f"Warning: {input_path}: {message}", file=sys.stderr)
 
 
 def _get_extract_kwargs(args, input_path: Path) -> dict:
@@ -116,11 +157,13 @@ def _transcribe_combined(
             print(f"Processing {input_path} (format: {format_name})...", file=sys.stderr)
             _warn_format_specific(args, input_path)
             is_multipage = factory.is_multipage_format(input_path)
-            transcription_config = _build_transcription_config(args, is_multipage)
+            expected_date = _expected_date_for(args, input_path)
+            transcription_config = _build_transcription_config(args, is_multipage, expected_date)
             extract_kwargs = _get_extract_kwargs(args, input_path)
             images = factory.extract_images(input_path, **extract_kwargs)
             transcriber = Transcriber(provider, transcription_config)
             text = transcriber.transcribe_images(images, output=None, plain_text=plain_text)
+            _report_header_date(text, expected_date, input_path)
             all_texts.append(text.strip())
         except Exception as e:
             # Abort: output would be incomplete without every file
@@ -171,11 +214,13 @@ def _transcribe_per_file(
             else:
                 _warn_format_specific(args, input_path)
                 is_multipage = factory.is_multipage_format(input_path)
-                transcription_config = _build_transcription_config(args, is_multipage)
+                expected_date = _expected_date_for(args, input_path)
+                transcription_config = _build_transcription_config(args, is_multipage, expected_date)
                 extract_kwargs = _get_extract_kwargs(args, input_path)
                 images = factory.extract_images(input_path, **extract_kwargs)
                 transcriber = Transcriber(provider, transcription_config)
                 transcriber.transcribe_file(images, out_path, plain_text=plain_text)
+                _report_header_date(out_path.read_text(encoding='utf-8'), expected_date, input_path)
 
                 # --pdf side-effect: also generate visual PDF (single-file mode only)
                 if not multi and input_path.suffix.lower() == '.note' and getattr(args, 'pdf', None):

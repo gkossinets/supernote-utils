@@ -26,8 +26,8 @@ class Transcriber:
         self.provider = provider
         self.config = config or TranscriptionConfig()
 
-        # Build prompt with any additional instructions
-        self.prompt = get_prompt(self.config.additional_prompt)
+        # Build prompt with the date hint (if any) and any additional instructions
+        self.prompt = get_prompt(self.config.additional_prompt, self.config.expected_date)
 
     def _get_batch_prompt(self, num_pages: int) -> str:
         """

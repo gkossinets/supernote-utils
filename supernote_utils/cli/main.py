@@ -7,6 +7,7 @@ Provides unified interface with subcommands for different operations.
 
 import argparse
 import sys
+from datetime import date
 
 from supernote_utils.__version__ import __version__
 
@@ -16,6 +17,31 @@ class TemperatureAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, values)
         setattr(namespace, '_temperature_was_set', True)
+
+
+def date_hint_arg(value: str) -> str:
+    """Validate a --date-hint value: 'auto', 'off', or a date as YYYY-MM-DD.
+
+    Args:
+        value: The option value as given on the command line.
+
+    Returns:
+        The value unchanged; it is resolved per input file in transcribe.py.
+
+    Raises:
+        argparse.ArgumentTypeError: If the value is none of the accepted forms.
+    """
+    if value in ("auto", "off"):
+        return value
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"expected 'auto', 'off', or a date as YYYY-MM-DD, got {value!r}"
+        )
+    if len(value) != 10:  # fromisoformat also accepts YYYYMMDD; require the documented form
+        raise argparse.ArgumentTypeError(f"expected a date as YYYY-MM-DD, got {value!r}")
+    return value
 
 
 def main():
@@ -171,6 +197,18 @@ examples:
         action="store_true",
         help="Insert page separator markers (---) between pages in the output. "
              "Only applies to multi-page formats (.note, .pdf)"
+    )
+    transcribe_parser.add_argument(
+        "--date-hint",
+        type=date_hint_arg,
+        default="auto",
+        metavar="WHEN",
+        help="Date the notes' handwritten headers are expected to show. It is given to the model "
+             "as a hint for reading dates, and the transcribed header is checked against it "
+             "afterwards (mismatches are reported as warnings; the text is never changed). "
+             "'auto' (default) reads a YYYYMMDD or YYYY-MM-DD date from each input filename and "
+             "does nothing for files without one; 'off' disables the hint and the check; "
+             "a date (YYYY-MM-DD) is used for every input"
     )
     transcribe_parser.add_argument(
         "--plain-text",
