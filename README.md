@@ -6,8 +6,6 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 supernote transcribe test/test.note -o notes.md
 ```
 
-![A handwritten Supernote page](docs/images/example-page.png)
-
 ```markdown
 **2025-10-20 MON** at home
 
@@ -249,7 +247,6 @@ Run `supernote list-models` to see what's available in your environment (it prin
 │   ├── providers/           # LLM provider implementations
 │   ├── sources/             # File source handlers
 │   └── note_format/         # Supernote .note file format parser
-├── docs/images/             # README example image
 ├── test/                    # Unit tests and fixtures
 │   └── test.note            # Sample handwritten note (test fixture)
 ├── misc/                    # Model calibration scripts and reference data
