@@ -22,12 +22,14 @@ __all__ = [
 
 VALID_PROVIDERS = ["anthropic", "google", "openai", "ollama"]
 
-# Shortcut -> (provider, model, options). Model is None so each provider class
-# stays the single source of truth for its default model IDs.
+# Shortcut -> (provider, model, options). Models come from the provider classes'
+# constants (None means the provider picks its tier default), so each class stays
+# the single source of truth for its model IDs.
 SHORTCUTS: dict[str, tuple[str, str | None, dict]] = {
     "claude": ("anthropic", None, {"use_sonnet": True}),
     "claude-sonnet": ("anthropic", None, {"use_sonnet": True}),
     "claude-haiku": ("anthropic", None, {"use_sonnet": False}),
+    "claude-opus": ("anthropic", AnthropicProvider.DEFAULT_OPUS_MODEL, {"use_sonnet": True}),
     "gemini": ("google", None, {"use_pro": True}),
     "gemini-pro": ("google", None, {"use_pro": True}),
     "gemini-flash": ("google", None, {"use_pro": False}),

@@ -243,6 +243,15 @@ class TestAnthropicProvider:
         assert kwargs["fallbacks"] == "default"
         assert kwargs["betas"] == ["server-side-fallback-2026-07-01"]
 
+    def test_opus_shortcut_creates_opus_provider_with_fallback(self, fake_anthropic_client):
+        config = ProviderConfig(anthropic_api_key="k", google_api_key=None)
+        provider = create_provider("claude-opus", config)
+        assert provider.actual_model == "claude-opus-5-5"
+        assert provider.get_display_name() == "Claude Opus 5.5"
+
+        provider.transcribe_image(_image(), "PROMPT")
+        assert fake_anthropic_client.beta.messages.create.call_args.kwargs["fallbacks"] == "default"
+
     def test_haiku_does_not_request_fallback(self, fake_anthropic_client):
         # Haiku has no server-side fallback; sending the parameter would be rejected.
         AnthropicProvider(api_key="k", use_sonnet=False).transcribe_image(_image(), "PROMPT")
@@ -303,6 +312,7 @@ class TestParseModelSpec:
             ("claude", "anthropic"),
             ("claude-sonnet", "anthropic"),
             ("claude-haiku", "anthropic"),
+            ("claude-opus", "anthropic"),
             ("gemini", "google"),
             ("gemini-pro", "google"),
             ("gemini-flash", "google"),
@@ -337,6 +347,7 @@ class TestDescribeShortcuts:
         described = describe_shortcuts()
         assert described["claude"] == "anthropic:claude-sonnet-5-5"
         assert described["claude-haiku"] == "anthropic:claude-haiku-5-5"
+        assert described["claude-opus"] == "anthropic:claude-opus-5-5"
         assert described["gemini-flash"] == f"google:{GoogleProvider.DEFAULT_FLASH_MODEL}"
         assert described["gemini-pro"] == f"google:{GoogleProvider.DEFAULT_PRO_MODEL}"
         assert described["gpt"] == f"openai:{OpenAIProvider.DEFAULT_MODEL}"

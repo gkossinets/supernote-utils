@@ -37,6 +37,8 @@ class AnthropicProvider(VisionProvider):
 
     DEFAULT_SONNET_MODEL = "claude-sonnet-5-5"
     DEFAULT_HAIKU_MODEL = "claude-haiku-5-5"
+    # Not a tier default; selected by the claude-opus shortcut.
+    DEFAULT_OPUS_MODEL = "claude-opus-5-5"
 
     def __init__(
         self,
@@ -159,6 +161,8 @@ class AnthropicProvider(VisionProvider):
             return "Claude Sonnet 5.5"
         if self.actual_model == self.DEFAULT_HAIKU_MODEL:
             return "Claude Haiku 5.5"
+        if self.actual_model == self.DEFAULT_OPUS_MODEL:
+            return "Claude Opus 5.5"
         return f"Claude ({self.actual_model})"
 
     @staticmethod
@@ -197,7 +201,7 @@ class AnthropicProvider(VisionProvider):
 
         # Static fallback: current models (checked November 2026)
         return [
-            "claude-opus-5-5",
+            cls.DEFAULT_OPUS_MODEL,
             cls.DEFAULT_SONNET_MODEL,
             cls.DEFAULT_HAIKU_MODEL,
             "claude-fable-5-2",

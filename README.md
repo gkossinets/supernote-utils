@@ -224,6 +224,7 @@ Run `supernote list-models` to see what's available in your environment (it prin
 | `gemini`, `gemini-pro` | `google:gemini-4-hydrogen` — Google's recommended general-purpose model |
 | `claude`, `claude-sonnet` | `anthropic:claude-sonnet-5-5` |
 | `claude-haiku` | `anthropic:claude-haiku-5-5` — faster, cheaper |
+| `claude-opus` | `anthropic:claude-opus-5-5` — most capable Claude, about 2× Sonnet's price |
 | `gpt`, `openai` | `openai:gpt-6.2-sol` |
 | `gpt-mini` | `openai:gpt-6-luna` — faster, cheaper |
 | `ollama` | Auto-detected local vision model |
