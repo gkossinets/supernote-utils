@@ -131,6 +131,14 @@ class GoogleProvider(VisionProvider):
             raise ProviderAPIError(f"Google API error: {e}") from e
 
         self._check_finish_reason(response)
+        if not response.text:
+            # A prompt-level block returns no candidates, so there is no finish reason.
+            feedback = getattr(response, "prompt_feedback", None)
+            reason = getattr(feedback, "block_reason", None) or "no reason given"
+            raise ProviderAPIError(
+                f"Gemini returned no text ({reason}). "
+                "Try using a different LLM provider (e.g., -m claude-sonnet)."
+            )
         return response.text
 
     @staticmethod

@@ -132,6 +132,17 @@ class TestGoogleProvider:
         with pytest.raises(ProviderAPIError, match="MAX_TOKENS"):
             provider.transcribe_image(_image(), "PROMPT")
 
+    def test_blocked_prompt_with_no_text_raises(self, fake_genai_client):
+        # A prompt-level block returns no candidates and text=None.
+        fake_genai_client.models.generate_content.return_value = SimpleNamespace(
+            text=None,
+            candidates=[],
+            prompt_feedback=SimpleNamespace(block_reason="PROHIBITED_CONTENT"),
+        )
+        provider = GoogleProvider(api_key="k")
+        with pytest.raises(ProviderAPIError, match="PROHIBITED_CONTENT"):
+            provider.transcribe_image(_image(), "PROMPT")
+
     def test_sdk_error_is_wrapped(self, fake_genai_client):
         fake_genai_client.models.generate_content.side_effect = RuntimeError("boom")
         provider = GoogleProvider(api_key="k")
