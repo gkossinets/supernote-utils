@@ -4,7 +4,7 @@ Plans, architecture decisions, progress, and next steps.
 
 ---
 
-## Current State (v0.2.0)
+## Current State (v0.3.0)
 
 The CLI is feature-complete for the core use case: transcribing handwritten notes from Supernote tablets (and other image sources) to Markdown using LLM vision APIs.
 
@@ -12,7 +12,7 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - `supernote transcribe` — unified command with auto-format detection (.note, .pdf, .png, .jpg, .webp)
 - Multi-file input with `-d` (output directory) or `-o` (combined output file)
 - `-t` flag for output type: `markdown`, `plain-text`, `pdf`
-- Providers: Anthropic (Claude), Google (Gemini), Ollama (local), OpenAI-compatible
+- Providers: Anthropic (Claude), Google (Gemini, via `google-genai`), OpenAI (Responses API, optional `[openai]` extra), Ollama (local)
 - Batch processing (default: 3 pages per API call); configurable with `--batch-size`
 - `supernote convert note2pdf` for visual PDF rendering from .note files
 - `supernote list-models` queries all providers for available models
@@ -33,9 +33,13 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - Providers send images to an LLM and return text — adding a new provider requires only subclassing `VisionProvider`
 - `Transcriber` in core orchestrates batching, page separators, streaming to file — format-agnostic
 
-**BYOK (bring your own key)** — no bundled API credits. Provider keys come from env vars. Default model is `gemini-flash-latest` (best free-tier option).
+**BYOK (bring your own key)** — no bundled API credits. Provider keys come from env vars. Default model is the `gemini-flash` shortcut (`gemini-3.8-flash`, best free-tier option).
 
 **Temperature default: 1.0** — set at the provider level; users can override with `--temperature`. Lower values (0.0–0.2) reduce hallucinations for transcription but add determinism tradeoffs.
+
+**No temperature for Claude or OpenAI (2026-11-26):** current Claude models accept only default sampling, and anthropic SDK 2.x has no `temperature` parameter. Current OpenAI models return a 400 if it is sent. Both providers drop the value and warn when `--temperature` is set. Gemini (3+ pinned to 1.0 unless overridden) and Ollama still use it.
+
+**Dependency refresh (2026-11-26):** `google-generativeai` → `google-genai`, PyPDF2 → `pypdf` (PyPDF2 missed embedded images that pypdf finds), Python floor 3.11 (numpy and google-genai require it). Model IDs were checked against each provider's live model list; the old Gemini preview IDs and `gemini-flash-latest` returned 404.
 
 **Date headers (2026-10-29):** In a real journal corpus (~250 daily pages, Gemini Flash), about 11% of transcribed date headers had a wrong year, and in several the day or weekday had been shifted to agree with the misread year. The prompt's "Logic is Law" rule invited that reconciliation. Three changes: (1) a strict rule in the prompt to transcribe dates, times, and numbers digit by digit and never reconcile a date with its weekday, with "Logic is Law" limited to words; (2) `--date-hint` (default `auto`) passes the date from the input filename to the model as a hint, explicitly subordinate to clear handwriting; (3) after transcription, `core/dates.py` compares the first date in the output with the expected date and checks the weekday, printing warnings to stderr. The text is never corrected automatically, because late-night entries can legitimately carry the next day's date.
 
@@ -55,7 +59,9 @@ From test runs on the `test/test.note` benchmark (3-page mixed-language document
 | llama3.2-vision (Ollama) | Good local | Q8 quantization recommended |
 | minicpm-v | Decent local | Specialized in document understanding |
 
-Recommended temperatures: Claude 0.2–0.3, Gemini 0.2, Ollama 0.1.
+Recommended temperatures: Claude 0.2–0.3, Gemini 0.2, Ollama 0.1. (Historical: Claude no longer accepts a temperature, and Gemini 3+ should stay at 1.0.)
+
+2026-11-26 spot check on `test/test.note`: Gemini 3.8 Flash was close to the reference (minor list/table formatting). Claude Sonnet 5.5 was accurate on English but misread several Russian words in the Issa poems ("Вечерний голос", "Ленечка") and the name "Pflaumm".
 
 ---
 

@@ -51,7 +51,7 @@ The package is structured as three independent layers that compose at the CLI la
 
 **CLI** (`supernote_utils/cli/`) — Thin wrappers over the above:
 - `main.py` — argparse dispatch to `transcribe`, `convert`, `list-models`
-- `transcribe.py` — resolves model shortcut strings → provider instances → `Transcriber`
+- `transcribe.py` — builds the provider via `create_provider` and runs the `Transcriber`
 - `list_models.py` — queries each provider for available models
 
 ## Keeping README.md current
@@ -60,18 +60,21 @@ After any change to CLI behaviour, defaults, flags, supported formats, or model 
 
 ## Provider/model string format
 
-The CLI accepts `provider:model` strings (e.g., `anthropic:claude-3-opus-20240229`) or shortcuts (`claude`, `gemini-flash`, `ollama`). Resolution logic lives in `transcribe.py`. When adding new models, update both the shortcut map there and `list_models.py`.
+The CLI accepts `provider:model` strings (e.g., `anthropic:claude-opus-5-5`) or shortcuts (`claude`, `gemini-flash`, `gpt`, `ollama`). The `SHORTCUTS` table and `parse_model_spec` live in `providers/__init__.py`; shortcuts point at each provider class's `DEFAULT_*` model constants, and `list-models` prints them via `describe_shortcuts()`. To change a default model, edit the provider's constant and the README shortcuts table.
+
+Claude and OpenAI providers never send `temperature` (current models reject it); Gemini and Ollama do.
 
 ## Adding a new provider
 
 1. Subclass `VisionProvider` in `supernote_utils/providers/`
 2. Implement `transcribe_image`, `is_available`, `get_display_name`
 3. Optionally override `transcribe_images_batch` for efficiency
-4. Register the prefix in `transcribe.py` and `list_models.py`
+4. Register the prefix in `VALID_PROVIDERS`/`SHORTCUTS`/`create_provider` in `providers/__init__.py`, and add a section to `list_models.py`
 5. Add the dependency to `pyproject.toml`
 
 ## Environment variables
 
 - `ANTHROPIC_API_KEY` — required for Claude models
 - `GOOGLE_API_KEY` — required for Gemini models
+- `OPENAI_API_KEY` — required for OpenAI models (install the `[openai]` extra)
 - `OLLAMA_BASE_URL` — Ollama server (default `http://localhost:11434`)

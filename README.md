@@ -2,12 +2,31 @@
 
 Python utilities for managing and transcribing handwritten notes from Ratta Supernote tablets.
 
+```bash
+supernote transcribe test/test.note -o notes.md
+```
+
+![A handwritten Supernote page](docs/images/example-page.png)
+
+```markdown
+**2025-10-20 MON** at home
+
+This is a test handwritten document. It contains text in English and Russian with some
+French and German names. It also contains lists, poems, starred paragraphs, headers, ==highlights.==
+
+☆ We think of short films as proofs of concepts for features, but most short films are just
+a medium in itself, they just tell a short story. Do you have an ability to take it further,
+or do you just think, this is what happened to me one day...
+```
+
+*Gemini 3.8 Flash output for the top of `test/test.note` (lines wrapped for display).*
+
 ## Features
 
 - **Universal file transcription** with auto-format detection (.note, .pdf, .png, .jpg, .jpeg, .webp)
-- **LLM vision APIs** support (Claude, Gemini, Ollama)
+- **LLM vision APIs** support (Claude, Gemini, OpenAI, Ollama)
 - **Batch processing** for multi-page documents (faster, more cost-effective)
-- **Temperature control** for deterministic transcription (reduce hallucinations)
+- **Temperature control** for Gemini and Ollama models
 - **Local LLM support** via Ollama (privacy-focused, no API costs)
 - **Model calibration scripts** for comparing transcription quality across models
 - **PDF generation** from .note files
@@ -43,6 +62,9 @@ pip install -e ".[test]"
 
 # Install with development tools (optional)
 pip install -e ".[dev]"
+
+# Add OpenAI support (optional)
+pip install -e ".[openai]"
 ```
 
 ### System Dependencies
@@ -81,6 +103,9 @@ export ANTHROPIC_API_KEY="your-key-here"
 # For Gemini (Google)
 export GOOGLE_API_KEY="your-key-here"
 
+# For GPT (OpenAI; needs the [openai] extra)
+export OPENAI_API_KEY="your-key-here"
+
 # For Ollama (local models) - no key needed, just install:
 # https://ollama.ai/
 ```
@@ -111,14 +136,11 @@ supernote transcribe scan.jpg -o output.md
 # Use Claude Sonnet model
 supernote transcribe input.note -o output.md -m claude-sonnet
 
-# Use Claude with recommended temperature
-supernote transcribe input.pdf -o output.md -m claude-sonnet --temperature 0.7
-
 # Use local Ollama model
 supernote transcribe input.note -o output.md -m ollama:qwen2.5-vl:7b
 
-# Use specific Anthropic model
-supernote transcribe input.pdf -o output.md -m anthropic:claude-3-opus-20240229
+# Use a specific model
+supernote transcribe input.pdf -o output.md -m anthropic:claude-opus-5-5
 
 # Output plain text (strip Markdown formatting)
 supernote transcribe input.pdf -m claude --plain-text -o output.txt
@@ -152,16 +174,13 @@ supernote convert input.note          # writes input.pdf next to input.note
 
 ## Temperature Settings
 
-Temperature controls the randomness of LLM generation. The CLI default is `1.0`, which is the recommended value for Gemini 3 models. Different providers have different optimal settings for transcription:
+Temperature controls the randomness of LLM generation. The CLI default is `1.0`.
 
-**Recommended defaults for transcription:**
-- **Gemini 3.x:** `1.0` (the default; do not lower — [Google recommends 1.0](https://ai.google.dev/gemini-api/docs/gemini-3#temperature) for reasoning models; lower values may cause looping or degraded output)
-- **Claude:** `--temperature 0.7` (balances determinism with flexibility for ambiguous handwriting)
+- **Gemini:** `1.0` (the default; do not lower — [Google recommends 1.0](https://ai.google.dev/gemini-api/docs/gemini-3#temperature) for Gemini 3 and later; lower values may cause looping or degraded output). The code sets Gemini 3+ models to 1.0 unless you override it, and prints a warning if you do.
 - **Ollama:** `--temperature 0.5` (local models benefit from some flexibility to handle ambiguity)
+- **Claude and OpenAI:** `--temperature` is ignored, with a warning. Current models from both providers use fixed sampling settings and reject the parameter.
 
-The code auto-adjusts Gemini 3 models to temperature 1.0 unless you explicitly override it. If you do override, a warning is displayed.
-
-For all providers, values above 1.0 increase hallucination risk and are not recommended for transcription.
+Values above 1.0 increase hallucination risk and are not recommended for transcription.
 
 ## Model Calibration
 
@@ -195,31 +214,26 @@ Results are saved to `misc/results/run_TIMESTAMP.md`
 
 ## Supported Models
 
-Run `supernote list-models` to see what's available in your environment. Use either shortcuts or explicit `provider:model` format:
+Run `supernote list-models` to see what's available in your environment (it prints the same shortcut table as below). Use either shortcuts or explicit `provider:model` format:
 
 **Shortcuts:**
-- `gemini-flash`, `gemini-flash-latest` → Gemini Flash Latest (default — fast, free tier available)
-- `gemini`, `gemini-pro` → Gemini 3 Pro (powerful, high accuracy)
-- `claude`, `claude-sonnet` → Claude Sonnet 4.5 (powerful, high accuracy)
-- `claude-haiku` → Claude Haiku 4.5 (faster, cost-effective)
-- `ollama` → Auto-detected local vision model
+
+| Shortcut | Model |
+|---|---|
+| `gemini-flash` (default) | `google:gemini-3.8-flash` — fast, free tier available |
+| `gemini`, `gemini-pro` | `google:gemini-4-carbon` — Google's strongest reasoning model |
+| `claude`, `claude-sonnet` | `anthropic:claude-sonnet-5-5` |
+| `claude-haiku` | `anthropic:claude-haiku-5-5` — faster, cheaper |
+| `gpt`, `openai` | `openai:gpt-6.2-sol` |
+| `gpt-mini` | `openai:gpt-6-luna` — faster, cheaper |
+| `ollama` | Auto-detected local vision model |
 
 **Explicit provider:model format:**
 ```bash
-# Anthropic (Claude)
--m anthropic:claude-sonnet-4-5-20250929
--m anthropic:claude-haiku-4-5-20251001
--m anthropic:claude-3-5-sonnet-20241022
--m anthropic:claude-3-opus-20240229
-
-# Google (Gemini)
--m google:gemini-3-pro-preview
--m google:gemini-flash-latest
-
-# Ollama (Local)
+-m anthropic:claude-opus-5-5
+-m google:gemini-4-hydrogen
+-m openai:gpt-6.2-astra
 -m ollama:qwen2.5-vl:7b
--m ollama:llama3.2-vision:11b
--m ollama:llava:latest
 ```
 
 **Note:** Only locally installed Ollama models appear in the output.
@@ -234,6 +248,7 @@ Run `supernote list-models` to see what's available in your environment. Use eit
 │   ├── providers/           # LLM provider implementations
 │   ├── sources/             # File source handlers
 │   └── note_format/         # Supernote .note file format parser
+├── docs/images/             # README example image
 ├── test/                    # Unit tests and fixtures
 │   └── test.note            # Sample handwritten note (test fixture)
 ├── misc/                    # Model calibration scripts and reference data
@@ -244,7 +259,7 @@ Run `supernote list-models` to see what's available in your environment. Use eit
 
 ## Tips for Best Results
 
-1. **Use the recommended temperature** for your provider (1.0 for Gemini, 0.7 for Claude, 0.5 for Ollama)
+1. **Use the recommended temperature** for your provider (1.0 for Gemini, 0.5 for Ollama)
 2. **Run the calibration script** (`misc/calibrate.py`) to find the best model for your handwriting
 3. **For multilingual content**, Claude Sonnet and Gemini Pro tend to perform best
 4. **For privacy-sensitive content**, use Ollama with local models
