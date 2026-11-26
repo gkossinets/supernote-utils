@@ -77,6 +77,11 @@ class TestGoogleProvider:
         provider = GoogleProvider(api_key="k", use_pro=True)
         assert provider.actual_model == GoogleProvider.DEFAULT_PRO_MODEL
 
+    def test_pro_default_is_hydrogen(self, fake_genai_client):
+        # Google's recommended general-purpose Gemini 4 model.
+        provider = GoogleProvider(api_key="k", use_pro=True)
+        assert provider.actual_model == "gemini-4-hydrogen"
+
     def test_batch_sends_prompt_and_all_images_in_one_call(self, fake_genai_client):
         provider = GoogleProvider(api_key="k", model="gemini-3.8-flash")
         images = [_image(), _image()]

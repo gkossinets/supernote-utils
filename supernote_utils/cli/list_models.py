@@ -83,7 +83,7 @@ def list_available_models(args):
     print("Examples:", file=sys.stderr)
     print("  supernote transcribe input.note -m claude-sonnet", file=sys.stderr)
     print("  supernote transcribe input.note -m anthropic:claude-opus-5-5", file=sys.stderr)
-    print("  supernote transcribe input.note -m google:gemini-4-hydrogen", file=sys.stderr)
+    print("  supernote transcribe input.note -m google:gemini-4-carbon", file=sys.stderr)
     print("  supernote transcribe input.note -m openai:gpt-6.2-astra", file=sys.stderr)
     print("  supernote transcribe input.note -m ollama:qwen2.5-vl:7b", file=sys.stderr)
     print("  supernote transcribe *.note -d transcribed/", file=sys.stderr)

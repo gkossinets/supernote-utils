@@ -221,7 +221,7 @@ Run `supernote list-models` to see what's available in your environment (it prin
 | Shortcut | Model |
 |---|---|
 | `gemini-flash` (default) | `google:gemini-3.8-flash` — fast, free tier available |
-| `gemini`, `gemini-pro` | `google:gemini-4-carbon` — Google's strongest reasoning model |
+| `gemini`, `gemini-pro` | `google:gemini-4-hydrogen` — Google's recommended general-purpose model |
 | `claude`, `claude-sonnet` | `anthropic:claude-sonnet-5-5` |
 | `claude-haiku` | `anthropic:claude-haiku-5-5` — faster, cheaper |
 | `gpt`, `openai` | `openai:gpt-6.2-sol` |
@@ -231,7 +231,7 @@ Run `supernote list-models` to see what's available in your environment (it prin
 **Explicit provider:model format:**
 ```bash
 -m anthropic:claude-opus-5-5
--m google:gemini-4-hydrogen
+-m google:gemini-4-carbon
 -m openai:gpt-6.2-astra
 -m ollama:qwen2.5-vl:7b
 ```

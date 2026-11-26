@@ -30,7 +30,7 @@ class GoogleProvider(VisionProvider):
     """Provider for Google Gemini vision models"""
 
     # Default models for different tiers
-    DEFAULT_PRO_MODEL = "gemini-4-carbon"
+    DEFAULT_PRO_MODEL = "gemini-4-hydrogen"
     DEFAULT_FLASH_MODEL = "gemini-3.8-flash"
 
     @staticmethod
@@ -215,9 +215,9 @@ class GoogleProvider(VisionProvider):
 
         # Static fallback: current stable models (checked November 2026)
         return [
-            cls.DEFAULT_PRO_MODEL,
+            "gemini-4-carbon",
             "gemini-4-neon",
-            "gemini-4-hydrogen",
+            cls.DEFAULT_PRO_MODEL,
             "gemini-4-argon",
             cls.DEFAULT_FLASH_MODEL,
             "gemini-3.5-flash-lite",
