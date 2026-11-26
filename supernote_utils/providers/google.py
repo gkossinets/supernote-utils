@@ -1,5 +1,6 @@
-"""Google Gemini vision provider"""
+"""Google Gemini vision provider (google-genai SDK)"""
 
+import re
 import sys
 
 from PIL import Image
@@ -8,22 +9,42 @@ from supernote_utils.exceptions import ProviderAPIError, ProviderNotAvailableErr
 from supernote_utils.providers.base import VisionProvider
 
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
 except ImportError:
     genai = None
+    types = None
+
+
+# Handwritten notes trip Gemini's default safety filters far more often than they
+# contain anything harmful, so only block content the API rates as high risk.
+_SAFETY_CATEGORIES = (
+    "HARM_CATEGORY_DANGEROUS_CONTENT",
+    "HARM_CATEGORY_HARASSMENT",
+    "HARM_CATEGORY_HATE_SPEECH",
+    "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+)
 
 
 class GoogleProvider(VisionProvider):
     """Provider for Google Gemini vision models"""
 
     # Default models for different tiers
-    DEFAULT_PRO_MODEL = "gemini-2.5-pro"
-    DEFAULT_FLASH_MODEL = "gemini-flash-latest"
+    DEFAULT_PRO_MODEL = "gemini-4-carbon"
+    DEFAULT_FLASH_MODEL = "gemini-3.8-flash"
 
     @staticmethod
     def _is_reasoning_model(model_name: str) -> bool:
-        """Check if model is a Gemini 3 reasoning model requiring temperature 1.0"""
-        return model_name.lower().startswith("gemini-3")
+        """Check if model is Gemini 3 or later, where Google recommends temperature 1.0.
+
+        Args:
+            model_name: Gemini model ID, e.g. "gemini-3.8-flash".
+
+        Returns:
+            True for Gemini major version 3 and above.
+        """
+        match = re.match(r"gemini-(\d+)", model_name.lower())
+        return bool(match) and int(match.group(1)) >= 3
 
     def __init__(
         self,
@@ -40,12 +61,12 @@ class GoogleProvider(VisionProvider):
             api_key: Google API key
             model: Specific model name (None for default)
             temperature: Generation temperature
-            use_pro: If True, use Pro (more powerful); if False, use Flash (faster)
+            use_pro: If True, use the Pro-tier default; if False, use Flash (faster)
+            temperature_was_set: Whether the user set the temperature explicitly
         """
         if genai is None:
             raise ProviderNotAvailableError(
-                "google-generativeai package not installed. "
-                "Install with: pip install google-generativeai"
+                "google-genai package not installed. Install with: pip install google-genai"
             )
 
         if not api_key:
@@ -53,35 +74,29 @@ class GoogleProvider(VisionProvider):
                 "Google API key not provided. Set GOOGLE_API_KEY environment variable."
             )
 
-        # Determine model
         if model:
             self.actual_model = model
         else:
             self.actual_model = self.DEFAULT_PRO_MODEL if use_pro else self.DEFAULT_FLASH_MODEL
 
-        # Auto-adjust temperature for Gemini 3 reasoning models
         adjusted_temperature = temperature
         if self._is_reasoning_model(self.actual_model):
             if not temperature_was_set:
-                # User didn't set temperature, auto-adjust to 1.0
                 adjusted_temperature = 1.0
                 print(
-                    "Note: Using temperature=1.0 for Gemini 3 reasoning model (recommended)",
+                    "Note: Using temperature=1.0 for Gemini 3+ reasoning model (recommended)",
                     file=sys.stderr,
                 )
             elif temperature < 1.0:
-                # User explicitly set temperature below 1.0
                 print(
-                    f"Warning: Gemini 3 models perform best at temperature=1.0. "
+                    f"Warning: Gemini 3+ models perform best at temperature=1.0. "
                     f"Using {temperature} may cause degraded output.",
                     file=sys.stderr,
                 )
 
         super().__init__(model=self.actual_model, temperature=adjusted_temperature)
 
-        # Configure and create client
-        genai.configure(api_key=api_key)
-        self.client = genai.GenerativeModel(self.actual_model)
+        self.client = genai.Client(api_key=api_key)
         self._use_pro = use_pro
 
         print(
@@ -90,132 +105,67 @@ class GoogleProvider(VisionProvider):
         )
 
     def transcribe_image(self, image: Image.Image, prompt: str) -> str:
-        """Transcribe image using Gemini API"""
-        try:
-            # Configure safety settings to reduce false positives for OCR tasks
-            safety_settings = [
-                {
-                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-                {
-                    "category": "HARM_CATEGORY_HARASSMENT",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-                {
-                    "category": "HARM_CATEGORY_HATE_SPEECH",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-                {
-                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-            ]
-
-            response = self.client.generate_content(
-                [prompt, image],
-                generation_config=genai.types.GenerationConfig(
-                    temperature=self.temperature,
-                ),
-                safety_settings=safety_settings,
-            )
-
-            # Check finish_reason before accessing text
-            if hasattr(response, 'candidates') and len(response.candidates) > 0:
-                candidate = response.candidates[0]
-                finish_reason = candidate.finish_reason
-
-                # finish_reason values: 0=UNSPECIFIED, 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION, 5=OTHER
-                if finish_reason == 4:  # RECITATION
-                    raise ProviderAPIError(
-                        "Gemini detected potential copyrighted content. This is likely a false positive "
-                        "for handwritten OCR. Try: (1) using a different image section, (2) retrying the "
-                        "request, or (3) using a different LLM provider (e.g., --api claude-sonnet)."
-                    )
-                elif finish_reason == 3:  # SAFETY
-                    raise ProviderAPIError(
-                        "Gemini blocked the response due to safety filters. "
-                        "Try using a different LLM provider (e.g., --api claude-sonnet)."
-                    )
-                elif finish_reason not in [0, 1]:  # Not UNSPECIFIED or STOP
-                    raise ProviderAPIError(
-                        f"Gemini stopped generation with finish_reason={finish_reason}. "
-                        "Try using a different LLM provider (e.g., --api claude-sonnet)."
-                    )
-
-            return response.text
-
-        except ProviderAPIError:
-            # Re-raise our custom errors
-            raise
-        except Exception as e:
-            raise ProviderAPIError(f"Google API error: {str(e)}") from e
+        """Transcribe a single image using the Gemini API"""
+        return self.transcribe_images_batch([image], prompt)
 
     def transcribe_images_batch(self, images: list[Image.Image], prompt: str) -> str:
         """Transcribe multiple images in a single API call"""
+        config = types.GenerateContentConfig(
+            temperature=self.temperature,
+            safety_settings=[
+                types.SafetySetting(
+                    category=category,
+                    threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                )
+                for category in _SAFETY_CATEGORIES
+            ],
+        )
+
         try:
-            # Configure safety settings to reduce false positives for OCR tasks
-            safety_settings = [
-                {
-                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-                {
-                    "category": "HARM_CATEGORY_HARASSMENT",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-                {
-                    "category": "HARM_CATEGORY_HATE_SPEECH",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-                {
-                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    "threshold": "BLOCK_ONLY_HIGH"
-                },
-            ]
-
-            # Build content array with prompt and all images
-            content = [prompt]
-            content.extend(images)
-
-            response = self.client.generate_content(
-                content,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=self.temperature,
-                ),
-                safety_settings=safety_settings,
+            response = self.client.models.generate_content(
+                model=self.actual_model,
+                contents=[prompt, *images],
+                config=config,
             )
-
-            # Check finish_reason before accessing text
-            if hasattr(response, 'candidates') and len(response.candidates) > 0:
-                candidate = response.candidates[0]
-                finish_reason = candidate.finish_reason
-
-                # finish_reason values: 0=UNSPECIFIED, 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION, 5=OTHER
-                if finish_reason == 4:  # RECITATION
-                    raise ProviderAPIError(
-                        "Gemini detected potential copyrighted content. This is likely a false positive "
-                        "for handwritten OCR. Try: (1) using a different image section, (2) retrying the "
-                        "request, or (3) using a different LLM provider (e.g., --api claude-sonnet)."
-                    )
-                elif finish_reason == 3:  # SAFETY
-                    raise ProviderAPIError(
-                        "Gemini blocked the response due to safety filters. "
-                        "Try using a different LLM provider (e.g., --api claude-sonnet)."
-                    )
-                elif finish_reason not in [0, 1]:  # Not UNSPECIFIED or STOP
-                    raise ProviderAPIError(
-                        f"Gemini stopped generation with finish_reason={finish_reason}. "
-                        "Try using a different LLM provider (e.g., --api claude-sonnet)."
-                    )
-
-            return response.text
-
-        except ProviderAPIError:
-            # Re-raise our custom errors
-            raise
         except Exception as e:
-            raise ProviderAPIError(f"Google API error: {str(e)}") from e
+            raise ProviderAPIError(f"Google API error: {e}") from e
+
+        self._check_finish_reason(response)
+        return response.text
+
+    @staticmethod
+    def _check_finish_reason(response) -> None:
+        """Raise a helpful error when Gemini stopped for anything but a normal finish.
+
+        Args:
+            response: GenerateContentResponse from the SDK.
+
+        Raises:
+            ProviderAPIError: If generation was blocked or cut short.
+        """
+        if not response.candidates:
+            return
+        reason = response.candidates[0].finish_reason
+        finish = types.FinishReason
+
+        if reason in (None, finish.STOP, finish.FINISH_REASON_UNSPECIFIED):
+            return
+        if reason == finish.RECITATION:
+            raise ProviderAPIError(
+                "Gemini detected potential copyrighted content. This is likely a false positive "
+                "for handwritten OCR. Try: (1) using a different image section, (2) retrying the "
+                "request, or (3) using a different LLM provider (e.g., -m claude-sonnet)."
+            )
+        if reason == finish.SAFETY:
+            raise ProviderAPIError(
+                "Gemini blocked the response due to safety filters. "
+                "Try using a different LLM provider (e.g., -m claude-sonnet)."
+            )
+        name = getattr(reason, "name", str(reason))
+        raise ProviderAPIError(
+            f"Gemini stopped generation with finish_reason={name}. "
+            "Try using a different LLM provider (e.g., -m claude-sonnet)."
+        )
 
     def is_available(self) -> bool:
         """Check if Google Gemini is available"""
@@ -223,12 +173,9 @@ class GoogleProvider(VisionProvider):
 
     def get_display_name(self) -> str:
         """Get display name"""
-        if "pro" in self.actual_model.lower():
-            return f"Gemini Pro ({self.actual_model})"
-        elif "flash" in self.actual_model.lower():
+        if "flash" in self.actual_model.lower():
             return f"Gemini Flash ({self.actual_model})"
-        else:
-            return f"Gemini ({self.actual_model})"
+        return f"Gemini ({self.actual_model})"
 
     @classmethod
     def list_available_models(cls, api_key: str | None = None) -> list[str]:
@@ -236,7 +183,7 @@ class GoogleProvider(VisionProvider):
         List available Gemini vision models.
 
         Args:
-            api_key: Google API key (optional, reads from env if not provided)
+            api_key: Google API key (optional; without it a static list is returned)
 
         Returns:
             List of available model names
@@ -244,28 +191,26 @@ class GoogleProvider(VisionProvider):
         if genai is None:
             return []
 
-        # Try to dynamically fetch models if API key is available
         if api_key:
             try:
-                genai.configure(api_key=api_key)
-                available_models = []
-                for model in genai.list_models():
-                    # Only include vision-capable models
-                    if "vision" in model.supported_generation_methods or \
-                       "generateContent" in model.supported_generation_methods:
-                        available_models.append(model.name.replace("models/", ""))
+                client = genai.Client(api_key=api_key)
+                available_models = [
+                    model.name.removeprefix("models/")
+                    for model in client.models.list()
+                    if "generateContent" in (model.supported_actions or [])
+                    and model.name.startswith("models/gemini")
+                ]
                 if available_models:
                     return available_models
-            except Exception:
-                pass  # Fall back to static list
+            except Exception as e:
+                print(f"Could not list Gemini models from the API: {e}", file=sys.stderr)
 
-        # Return known Gemini vision models (static fallback)
+        # Static fallback: current stable models (checked November 2026)
         return [
-            "gemini-3-flash-preview",
             cls.DEFAULT_PRO_MODEL,
+            "gemini-4-neon",
+            "gemini-4-hydrogen",
+            "gemini-4-argon",
             cls.DEFAULT_FLASH_MODEL,
-            "gemini-2.0-flash-exp",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-8b",
+            "gemini-3.5-flash-lite",
         ]

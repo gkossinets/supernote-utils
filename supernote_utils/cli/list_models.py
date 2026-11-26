@@ -40,8 +40,8 @@ def list_available_models(args):
         if not api_key:
             print("    (Set GOOGLE_API_KEY to use Google models)", file=sys.stderr)
     else:
-        print("  - google-generativeai package not installed", file=sys.stderr)
-        print("    Install with: pip install google-generativeai", file=sys.stderr)
+        print("  - google-genai package not installed", file=sys.stderr)
+        print("    Install with: pip install google-genai", file=sys.stderr)
     print(file=sys.stderr)
 
     # List Ollama models
