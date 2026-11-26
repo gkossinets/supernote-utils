@@ -121,8 +121,8 @@ examples:
   # Use Claude Sonnet model
   supernote transcribe input.pdf -o output.md -m claude-sonnet
 
-  # Use specific model with custom temperature
-  supernote transcribe input.note -o output.md -m anthropic:claude-3-opus-20240229 --temperature 0.7
+  # Use a specific model with a custom temperature (Gemini and Ollama only)
+  supernote transcribe input.note -o output.md -m google:gemini-4-hydrogen --temperature 1.0
 
   # Generate both markdown and PDF output (.note files only)
   supernote transcribe input.note -o output.md --pdf output.pdf
@@ -164,12 +164,13 @@ examples:
     )
     transcribe_parser.add_argument(
         "-m", "--model",
-        default="gemini-flash-latest",
+        default="gemini-flash",
         metavar="MODEL",
-        help="Model to use for transcription (default: gemini-flash-latest). "
-             "Format: 'provider:model' (e.g., anthropic:claude-3-opus-20240229, "
-             "google:gemini-3-pro-preview, ollama:qwen2.5-vl:7b) or use shortcuts: "
-             "claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama. "
+        help="Model to use for transcription (default: gemini-flash). "
+             "Format: 'provider:model' (e.g., anthropic:claude-opus-5-5, "
+             "google:gemini-4-carbon, openai:gpt-6.2-astra, ollama:qwen2.5-vl:7b) "
+             "or a shortcut: claude, claude-sonnet, claude-haiku, gemini, gemini-pro, "
+             "gemini-flash, gpt, gpt-mini, openai, ollama. "
              "Run 'supernote list-models' to see all available models"
     )
     transcribe_parser.add_argument(
@@ -179,8 +180,9 @@ examples:
         metavar="FLOAT",
         action=TemperatureAction,
         help="LLM generation temperature controlling randomness (default: 1.0). "
-             "Recommended: 1.0 for Gemini 3, 0.7 for Claude, 0.5 for Ollama. "
-             "Range: 0.0 to 2.0"
+             "Applies to Gemini and Ollama; ignored for Claude and OpenAI, whose "
+             "current models use fixed sampling. Recommended: 1.0 for Gemini, "
+             "0.5 for Ollama. Range: 0.0 to 2.0"
     )
     transcribe_parser.add_argument(
         "--batch-size",

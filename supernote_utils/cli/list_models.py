@@ -6,9 +6,11 @@ CLI command to list available models from all providers.
 import os
 import sys
 
+from supernote_utils.providers import describe_shortcuts
 from supernote_utils.providers.anthropic import AnthropicProvider
 from supernote_utils.providers.google import GoogleProvider
 from supernote_utils.providers.ollama import OllamaProvider
+from supernote_utils.providers.openai import OpenAIProvider
 
 
 def list_available_models(args):
@@ -44,6 +46,20 @@ def list_available_models(args):
         print("    Install with: pip install google-genai", file=sys.stderr)
     print(file=sys.stderr)
 
+    # List OpenAI models
+    print("OpenAI (GPT):", file=sys.stderr)
+    api_key = os.getenv("OPENAI_API_KEY")
+    openai_models = OpenAIProvider.list_available_models(api_key)
+    if openai_models:
+        for model in openai_models:
+            print(f"  openai:{model}", file=sys.stderr)
+        if not api_key:
+            print("    (Set OPENAI_API_KEY to use OpenAI models)", file=sys.stderr)
+    else:
+        print("  - openai package not installed (optional)", file=sys.stderr)
+        print("    Install with: pip install 'supernote-utils[openai]'", file=sys.stderr)
+    print(file=sys.stderr)
+
     # List Ollama models
     print("Ollama (Local):", file=sys.stderr)
     ollama_models = OllamaProvider.list_available_models()
@@ -56,18 +72,18 @@ def list_available_models(args):
         print("    Make sure Ollama is running at http://localhost:11434", file=sys.stderr)
     print(file=sys.stderr)
 
-    # Shortcuts section
+    # Shortcuts section, generated from the factory so it can't drift from it
     print("Shortcuts:", file=sys.stderr)
-    print("  claude, claude-sonnet  → anthropic:claude-sonnet-4-5-20250929", file=sys.stderr)
-    print("  claude-haiku           → anthropic:claude-haiku-4-5-20251001", file=sys.stderr)
-    print("  gemini, gemini-pro     → google:gemini-3-pro-preview (temp=1.0)", file=sys.stderr)
-    print("  gemini-flash, gemini-3-flash → google:gemini-3-flash-preview (temp=1.0)", file=sys.stderr)
-    print("  ollama                 → ollama:<auto-detected vision model>", file=sys.stderr)
+    shortcuts = describe_shortcuts()
+    width = max(len(name) for name in shortcuts)
+    for name, target in shortcuts.items():
+        print(f"  {name:<{width}}  → {target}", file=sys.stderr)
     print(file=sys.stderr)
 
     print("Examples:", file=sys.stderr)
     print("  supernote transcribe input.note -m claude-sonnet", file=sys.stderr)
-    print("  supernote transcribe input.note -m anthropic:claude-3-opus-20240229", file=sys.stderr)
-    print("  supernote transcribe input.note -m google:gemini-3-pro-preview", file=sys.stderr)
+    print("  supernote transcribe input.note -m anthropic:claude-opus-5-5", file=sys.stderr)
+    print("  supernote transcribe input.note -m google:gemini-4-hydrogen", file=sys.stderr)
+    print("  supernote transcribe input.note -m openai:gpt-6.2-astra", file=sys.stderr)
     print("  supernote transcribe input.note -m ollama:qwen2.5-vl:7b", file=sys.stderr)
     print("  supernote transcribe *.note -d transcribed/", file=sys.stderr)

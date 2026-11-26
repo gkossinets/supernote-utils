@@ -41,6 +41,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+openai = [
+    "openai>=3.60.0",
+]
 test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",

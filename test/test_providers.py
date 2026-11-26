@@ -267,3 +267,139 @@ class TestCreateProvider:
         config = ProviderConfig(anthropic_api_key="k", google_api_key=None)
         create_provider("claude", config, temperature=0.5, temperature_was_set=True)
         assert "ignored" in capsys.readouterr().err
+
+    def test_creates_openai_provider(self, fake_openai_client):
+        config = ProviderConfig(anthropic_api_key=None, google_api_key=None, openai_api_key="k")
+        provider = create_provider("gpt", config)
+        assert isinstance(provider, OpenAIProvider)
+        assert provider.actual_model == OpenAIProvider.DEFAULT_MODEL
+
+    def test_openai_without_key_raises(self, fake_openai_client):
+        config = ProviderConfig(anthropic_api_key=None, google_api_key=None, openai_api_key=None)
+        with pytest.raises(ProviderNotAvailableError, match="OPENAI_API_KEY"):
+            create_provider("openai", config)
+
+
+class TestParseModelSpec:
+    @pytest.mark.parametrize(
+        "spec, provider",
+        [
+            ("claude", "anthropic"),
+            ("claude-sonnet", "anthropic"),
+            ("claude-haiku", "anthropic"),
+            ("gemini", "google"),
+            ("gemini-pro", "google"),
+            ("gemini-flash", "google"),
+            ("gpt", "openai"),
+            ("gpt-mini", "openai"),
+            ("openai", "openai"),
+            ("ollama", "ollama"),
+        ],
+    )
+    def test_shortcuts(self, spec, provider):
+        assert parse_model_spec(spec)[0] == provider
+
+    def test_explicit_openai_model(self):
+        assert parse_model_spec("openai:gpt-6.2-astra") == ("openai", "gpt-6.2-astra", {})
+
+    def test_explicit_ollama_model_keeps_tag_colon(self):
+        assert parse_model_spec("ollama:qwen2.5-vl:7b")[1] == "qwen2.5-vl:7b"
+
+    @pytest.mark.parametrize("spec", ["gemini-flash-latest", "gemini-3-flash"])
+    def test_retired_shortcuts_are_rejected(self, spec):
+        # These pointed at model IDs the Gemini API no longer serves.
+        with pytest.raises(ConfigurationError):
+            parse_model_spec(spec)
+
+    def test_unknown_provider_lists_openai(self):
+        with pytest.raises(ConfigurationError, match="openai"):
+            parse_model_spec("mistral:large")
+
+
+class TestDescribeShortcuts:
+    def test_every_shortcut_resolves_to_a_concrete_model(self):
+        described = describe_shortcuts()
+        assert described["claude"] == "anthropic:claude-sonnet-5-5"
+        assert described["claude-haiku"] == "anthropic:claude-haiku-5-5"
+        assert described["gemini-flash"] == f"google:{GoogleProvider.DEFAULT_FLASH_MODEL}"
+        assert described["gemini-pro"] == f"google:{GoogleProvider.DEFAULT_PRO_MODEL}"
+        assert described["gpt"] == f"openai:{OpenAIProvider.DEFAULT_MODEL}"
+        assert described["gpt-mini"] == f"openai:{OpenAIProvider.DEFAULT_MINI_MODEL}"
+        assert described["ollama"] == "ollama:<auto-detected vision model>"
+
+
+# ---------------------------------------------------------------------------
+# OpenAIProvider (Responses API)
+# ---------------------------------------------------------------------------
+
+from supernote_utils.exceptions import ConfigurationError  # noqa: E402
+from supernote_utils.providers import describe_shortcuts  # noqa: E402
+from supernote_utils.providers import openai as openai_module  # noqa: E402
+from supernote_utils.providers.openai import OpenAIProvider  # noqa: E402
+
+
+def _openai_response(text: str = "transcribed", status: str = "completed", reason=None):
+    return SimpleNamespace(
+        output_text=text,
+        status=status,
+        incomplete_details=SimpleNamespace(reason=reason) if reason else None,
+    )
+
+
+@pytest.fixture
+def fake_openai_client(monkeypatch):
+    client = MagicMock()
+    client.responses.create.return_value = _openai_response()
+    client_cls = MagicMock(return_value=client)
+    monkeypatch.setattr(openai_module.openai, "OpenAI", client_cls)
+    client.client_cls = client_cls
+    return client
+
+
+class TestOpenAIProvider:
+    def test_default_models(self, fake_openai_client):
+        assert OpenAIProvider(api_key="k").actual_model == "gpt-6.2-sol"
+        assert OpenAIProvider(api_key="k", use_mini=True).actual_model == "gpt-6-luna"
+
+    def test_missing_api_key_raises(self, fake_openai_client):
+        with pytest.raises(ProviderNotAvailableError):
+            OpenAIProvider(api_key="")
+
+    def test_batch_uses_responses_api_with_all_images(self, fake_openai_client):
+        provider = OpenAIProvider(api_key="k")
+        result = provider.transcribe_images_batch([_image(), _image()], "PROMPT")
+
+        assert result == "transcribed"
+        fake_openai_client.responses.create.assert_called_once()
+        kwargs = fake_openai_client.responses.create.call_args.kwargs
+        content = kwargs["input"][0]["content"]
+        assert content[0] == {"type": "input_text", "text": "PROMPT"}
+        assert [part["type"] for part in content[1:]] == ["input_image", "input_image"]
+        assert content[1]["image_url"].startswith("data:image/jpeg;base64,")
+
+    def test_does_not_send_temperature(self, fake_openai_client):
+        # Current OpenAI models reject the temperature parameter.
+        provider = OpenAIProvider(api_key="k", temperature=0.4, temperature_was_set=True)
+        provider.transcribe_image(_image(), "PROMPT")
+        assert "temperature" not in fake_openai_client.responses.create.call_args.kwargs
+
+    def test_warns_when_temperature_set_explicitly(self, fake_openai_client, capsys):
+        OpenAIProvider(api_key="k", temperature=0.4, temperature_was_set=True)
+        assert "ignored" in capsys.readouterr().err
+
+    def test_incomplete_response_raises(self, fake_openai_client):
+        fake_openai_client.responses.create.return_value = _openai_response(
+            status="incomplete", reason="max_output_tokens"
+        )
+        with pytest.raises(ProviderAPIError, match="max_output_tokens"):
+            OpenAIProvider(api_key="k").transcribe_image(_image(), "PROMPT")
+
+    def test_empty_output_raises(self, fake_openai_client):
+        fake_openai_client.responses.create.return_value = _openai_response(text="")
+        with pytest.raises(ProviderAPIError, match="no text"):
+            OpenAIProvider(api_key="k").transcribe_image(_image(), "PROMPT")
+
+    def test_sdk_error_is_wrapped(self, fake_openai_client):
+        fake_openai_client.responses.create.side_effect = RuntimeError("boom")
+        with pytest.raises(ProviderAPIError, match="boom"):
+            OpenAIProvider(api_key="k").transcribe_image(_image(), "PROMPT")

@@ -35,6 +35,9 @@ class ProviderConfig:
     google_api_key: str | None = field(
         default_factory=lambda: os.getenv("GOOGLE_API_KEY")
     )
+    openai_api_key: str | None = field(
+        default_factory=lambda: os.getenv("OPENAI_API_KEY")
+    )
 
     # Ollama configuration
     ollama_base_url: str = "http://localhost:11434"

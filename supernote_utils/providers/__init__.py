@@ -6,15 +6,36 @@ from supernote_utils.providers.anthropic import AnthropicProvider
 from supernote_utils.providers.base import VisionProvider
 from supernote_utils.providers.google import GoogleProvider
 from supernote_utils.providers.ollama import OllamaProvider
+from supernote_utils.providers.openai import OpenAIProvider
 
 __all__ = [
     "VisionProvider",
     "AnthropicProvider",
     "GoogleProvider",
     "OllamaProvider",
+    "OpenAIProvider",
+    "SHORTCUTS",
     "create_provider",
+    "describe_shortcuts",
     "parse_model_spec",
 ]
+
+VALID_PROVIDERS = ["anthropic", "google", "openai", "ollama"]
+
+# Shortcut -> (provider, model, options). Model is None so each provider class
+# stays the single source of truth for its default model IDs.
+SHORTCUTS: dict[str, tuple[str, str | None, dict]] = {
+    "claude": ("anthropic", None, {"use_sonnet": True}),
+    "claude-sonnet": ("anthropic", None, {"use_sonnet": True}),
+    "claude-haiku": ("anthropic", None, {"use_sonnet": False}),
+    "gemini": ("google", None, {"use_pro": True}),
+    "gemini-pro": ("google", None, {"use_pro": True}),
+    "gemini-flash": ("google", None, {"use_pro": False}),
+    "gpt": ("openai", None, {"use_mini": False}),
+    "openai": ("openai", None, {"use_mini": False}),
+    "gpt-mini": ("openai", None, {"use_mini": True}),
+    "ollama": ("ollama", None, {}),
+}
 
 
 def parse_model_spec(model_spec: str) -> tuple[str, str | None, dict]:
@@ -22,71 +43,76 @@ def parse_model_spec(model_spec: str) -> tuple[str, str | None, dict]:
     Parse model specification into (provider, model_name, options).
 
     Accepts formats:
-    - Explicit: "anthropic:claude-3-opus-20240229", "google:gemini-2.5-pro", "ollama:qwen2.5-vl:7b"
-    - Shortcuts: "claude", "claude-sonnet", "claude-haiku", "gemini", "gemini-flash", "gemini-pro", "ollama"
+    - Explicit: "anthropic:claude-opus-5-5", "google:gemini-4-carbon",
+      "openai:gpt-6.2-astra", "ollama:qwen2.5-vl:7b"
+    - Shortcuts: see SHORTCUTS
 
     Args:
         model_spec: Model specification string
 
     Returns:
         Tuple of (provider_name, model_name, options_dict)
-        - provider_name: "anthropic", "google", or "ollama"
+        - provider_name: one of VALID_PROVIDERS
         - model_name: Specific model or None for provider default
         - options_dict: Additional options like {"use_sonnet": True}
 
     Raises:
         ConfigurationError: If model_spec format is invalid
     """
-    # Shortcuts mapping: shortcut -> (provider, model, options)
-    shortcuts = {
-        "claude": ("anthropic", None, {"use_sonnet": True}),
-        "claude-sonnet": ("anthropic", None, {"use_sonnet": True}),
-        "claude-haiku": ("anthropic", None, {"use_sonnet": False}),
-        "gemini": ("google", "gemini-3-pro-preview", {"use_pro": True}),
-        "gemini-flash": ("google", "gemini-flash-latest", {"use_pro": False}),
-        "gemini-flash-latest": ("google", "gemini-flash-latest", {"use_pro": False}),
-        "gemini-3-flash": ("google", "gemini-3-flash-preview", {"use_pro": False}),
-        "gemini-pro": ("google", "gemini-3-pro-preview", {"use_pro": True}),
-        "ollama": ("ollama", None, {}),
-    }
-
     model_spec_lower = model_spec.lower()
 
-    # Check for shortcut first
-    if model_spec_lower in shortcuts:
-        return shortcuts[model_spec_lower]
+    if model_spec_lower in SHORTCUTS:
+        return SHORTCUTS[model_spec_lower]
 
-    # Check for explicit provider:model format
     if ":" in model_spec:
         # Split only on first colon (ollama models can have colons like "qwen2.5-vl:7b")
-        parts = model_spec.split(":", 1)
-        provider = parts[0].lower()
-        model = parts[1] if len(parts) > 1 and parts[1] else None
+        provider, _, model = model_spec.partition(":")
+        provider = provider.lower()
 
-        # Validate provider
-        valid_providers = ["anthropic", "google", "ollama"]
-        if provider not in valid_providers:
+        if provider not in VALID_PROVIDERS:
             raise ConfigurationError(
                 f"Unknown provider: '{provider}'. "
-                f"Valid providers: {', '.join(valid_providers)}"
+                f"Valid providers: {', '.join(VALID_PROVIDERS)}"
             )
 
-        # Set default options based on provider
         options = {}
         if provider == "anthropic":
-            options["use_sonnet"] = True  # Default to sonnet behavior
+            options["use_sonnet"] = True
         elif provider == "google":
-            options["use_pro"] = "pro" in (model or "").lower()
+            options["use_pro"] = "pro" in model.lower()
 
-        return (provider, model, options)
+        return (provider, model or None, options)
 
-    # No colon and not a shortcut - invalid format
     raise ConfigurationError(
         f"Invalid model specification: '{model_spec}'. "
-        f"Use 'provider:model' format (e.g., 'anthropic:claude-3-opus-20240229', "
-        f"'google:gemini-2.5-pro', 'ollama:qwen2.5-vl:7b') "
-        f"or a shortcut: claude, claude-sonnet, claude-haiku, gemini, gemini-flash, gemini-pro, ollama"
+        f"Use 'provider:model' format (e.g., 'anthropic:claude-opus-5-5', "
+        f"'google:gemini-4-carbon', 'openai:gpt-6.2-astra', 'ollama:qwen2.5-vl:7b') "
+        f"or a shortcut: {', '.join(SHORTCUTS)}"
     )
+
+
+def describe_shortcuts() -> dict[str, str]:
+    """Map each shortcut to the concrete "provider:model" it currently selects.
+
+    Returns:
+        Dict of shortcut name to "provider:model" string.
+    """
+    defaults = {
+        ("anthropic", "use_sonnet", True): AnthropicProvider.DEFAULT_SONNET_MODEL,
+        ("anthropic", "use_sonnet", False): AnthropicProvider.DEFAULT_HAIKU_MODEL,
+        ("google", "use_pro", True): GoogleProvider.DEFAULT_PRO_MODEL,
+        ("google", "use_pro", False): GoogleProvider.DEFAULT_FLASH_MODEL,
+        ("openai", "use_mini", False): OpenAIProvider.DEFAULT_MODEL,
+        ("openai", "use_mini", True): OpenAIProvider.DEFAULT_MINI_MODEL,
+    }
+    described = {}
+    for name, (provider, model, options) in SHORTCUTS.items():
+        if provider == "ollama":
+            described[name] = "ollama:<auto-detected vision model>"
+            continue
+        ((option, value),) = options.items()
+        described[name] = f"{provider}:{model or defaults[(provider, option, value)]}"
+    return described
 
 
 def create_provider(
@@ -100,7 +126,7 @@ def create_provider(
 
     Args:
         model_spec: Model specification in "provider:model" format or shortcut
-                   Examples: "anthropic:claude-3-opus-20240229", "google:gemini-2.5-pro",
+                   Examples: "anthropic:claude-opus-5-5", "google:gemini-4-carbon",
                             "ollama:qwen2.5-vl:7b", "claude-sonnet", "gemini-flash"
         config: Provider configuration (uses defaults if None)
         temperature: Generation temperature
@@ -115,10 +141,8 @@ def create_provider(
     if config is None:
         config = ProviderConfig.from_env()
 
-    # Parse the model specification
     provider_name, model, options = parse_model_spec(model_spec)
 
-    # Create appropriate provider
     if provider_name == "anthropic":
         return AnthropicProvider(
             api_key=config.anthropic_api_key,
@@ -128,7 +152,7 @@ def create_provider(
             temperature_was_set=temperature_was_set,
         )
 
-    elif provider_name == "google":
+    if provider_name == "google":
         return GoogleProvider(
             api_key=config.google_api_key,
             model=model,
@@ -137,13 +161,21 @@ def create_provider(
             temperature_was_set=temperature_was_set,
         )
 
-    elif provider_name == "ollama":
+    if provider_name == "openai":
+        return OpenAIProvider(
+            api_key=config.openai_api_key,
+            model=model,
+            temperature=temperature,
+            use_mini=options.get("use_mini", False),
+            temperature_was_set=temperature_was_set,
+        )
+
+    if provider_name == "ollama":
         return OllamaProvider(
             model=model,
             temperature=temperature,
             base_url=config.ollama_base_url,
         )
 
-    else:
-        # This shouldn't happen if parse_model_spec validates correctly
-        raise ConfigurationError(f"Unsupported provider: {provider_name}")
+    # This shouldn't happen if parse_model_spec validates correctly
+    raise ConfigurationError(f"Unsupported provider: {provider_name}")

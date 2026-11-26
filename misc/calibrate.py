@@ -153,18 +153,16 @@ def build_test_configs(
     if not ollama_only:
         if quick:
             configs.extend([
-                {"model": "claude-sonnet", "temperature": 0.7},
+                {"model": "claude-sonnet", "temperature": 1.0},
                 {"model": "gemini-flash", "temperature": 1.0},
             ])
         else:
             configs.extend([
-                # Claude — recommended default 0.7
-                {"model": "claude-sonnet", "temperature": 0.2},
-                {"model": "claude-sonnet", "temperature": 0.5},
-                {"model": "claude-sonnet", "temperature": 0.7},
-                {"model": "claude-haiku",  "temperature": 0.2},
-                {"model": "claude-haiku",  "temperature": 0.5},
-                {"model": "claude-haiku",  "temperature": 0.7},
+                # Claude and OpenAI — current models ignore temperature, so one run each
+                {"model": "claude-sonnet", "temperature": 1.0},
+                {"model": "claude-haiku",  "temperature": 1.0},
+                {"model": "gpt",           "temperature": 1.0},
+                {"model": "gpt-mini",      "temperature": 1.0},
                 # Gemini — recommended default 1.0
                 {"model": "gemini-flash",  "temperature": 0.5},
                 {"model": "gemini-flash",  "temperature": 1.0},
@@ -201,6 +199,8 @@ def _is_available(model_spec: str) -> bool:
         return bool(os.getenv("ANTHROPIC_API_KEY"))
     if m.startswith("google") or m.startswith("gemini"):
         return bool(os.getenv("GOOGLE_API_KEY"))
+    if m.startswith("openai") or m.startswith("gpt"):
+        return bool(os.getenv("OPENAI_API_KEY"))
     # Ollama: always attempt — availability was already checked at detection time
     return True
 
@@ -314,7 +314,7 @@ examples:
   python misc/calibrate.py --ollama-only
 
   # Add a specific model to the standard set
-  python misc/calibrate.py --models anthropic:claude-3-opus-20240229
+  python misc/calibrate.py --models anthropic:claude-opus-5-5
         """,
     )
 
@@ -356,7 +356,7 @@ examples:
         nargs="+",
         metavar="MODEL_SPEC",
         default=[],
-        help="Additional model specs to include (e.g., anthropic:claude-3-opus-20240229)",
+        help="Additional model specs to include (e.g., anthropic:claude-opus-5-5)",
     )
 
     args = parser.parse_args()

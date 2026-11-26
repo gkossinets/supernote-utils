@@ -1,4 +1,4 @@
-"""OpenAI GPT-4o vision provider"""
+"""OpenAI vision provider (Responses API)"""
 
 import base64
 import io
@@ -15,12 +15,18 @@ except ImportError:
     openai = None
 
 
-class OpenAIProvider(VisionProvider):
-    """Provider for OpenAI GPT-4o vision models"""
+# Room for reasoning plus several pages of transcription.
+_MAX_OUTPUT_TOKENS = 16000
 
-    # Default models
-    DEFAULT_MODEL = "gpt-4o"
-    DEFAULT_MINI_MODEL = "gpt-4o-mini"
+# Model ID fragments for OpenAI models that are not general image-to-text models.
+_NON_VISION_MARKERS = ("search", "codex", "audio", "realtime", "tts", "transcribe", "image")
+
+
+class OpenAIProvider(VisionProvider):
+    """Provider for OpenAI GPT vision models"""
+
+    DEFAULT_MODEL = "gpt-6.2-sol"
+    DEFAULT_MINI_MODEL = "gpt-6-luna"
 
     def __init__(
         self,
@@ -28,6 +34,7 @@ class OpenAIProvider(VisionProvider):
         model: str | None = None,
         temperature: float = 1.0,
         use_mini: bool = False,
+        temperature_was_set: bool = False,
     ):
         """
         Initialize OpenAI provider.
@@ -35,12 +42,13 @@ class OpenAIProvider(VisionProvider):
         Args:
             api_key: OpenAI API key
             model: Specific model name (None for default)
-            temperature: Generation temperature
-            use_mini: If True, use gpt-4o-mini (faster, cheaper); if False, use gpt-4o
+            temperature: Accepted for interface compatibility; not sent to the API
+            use_mini: If True, use the small, cheaper default model
+            temperature_was_set: Whether the user set the temperature explicitly
         """
         if openai is None:
             raise ProviderNotAvailableError(
-                "openai package not installed. Install with: pip install openai"
+                "openai package not installed. Install with: pip install 'supernote-utils[openai]'"
             )
 
         if not api_key:
@@ -48,7 +56,6 @@ class OpenAIProvider(VisionProvider):
                 "OpenAI API key not provided. Set OPENAI_API_KEY environment variable."
             )
 
-        # Determine model
         if model:
             self.actual_model = model
         else:
@@ -56,75 +63,55 @@ class OpenAIProvider(VisionProvider):
 
         super().__init__(model=self.actual_model, temperature=temperature)
 
+        # Current OpenAI models reject the temperature parameter outright.
+        if temperature_was_set:
+            print(
+                f"Warning: --temperature {temperature} is ignored for OpenAI models "
+                "(current models do not accept it).",
+                file=sys.stderr,
+            )
+
         self.client = openai.OpenAI(api_key=api_key)
         self._use_mini = use_mini
 
-        print(
-            f"Using {self.get_display_name()} (temperature={self.temperature})",
-            file=sys.stderr,
-        )
+        print(f"Using {self.get_display_name()}", file=sys.stderr)
 
     def transcribe_image(self, image: Image.Image, prompt: str) -> str:
-        """Transcribe image using OpenAI API"""
-        base64_image = self._image_to_base64(image)
-
-        try:
-            response = self.client.chat.completions.create(
-                model=self.actual_model,
-                max_tokens=4096,
-                temperature=self.temperature,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}",
-                                    "detail": "high",
-                                },
-                            },
-                        ],
-                    }
-                ],
-            )
-            return response.choices[0].message.content
-
-        except Exception as e:
-            raise ProviderAPIError(f"OpenAI API error: {str(e)}") from e
+        """Transcribe a single image using the OpenAI API"""
+        return self.transcribe_images_batch([image], prompt)
 
     def transcribe_images_batch(self, images: list[Image.Image], prompt: str) -> str:
         """Transcribe multiple images in a single API call"""
+        content = [{"type": "input_text", "text": prompt}]
+        for image in images:
+            content.append({
+                "type": "input_image",
+                "image_url": f"data:image/jpeg;base64,{self._image_to_base64(image)}",
+                "detail": "high",
+            })
+
         try:
-            # Build content array with prompt and all images
-            content = [{"type": "text", "text": prompt}]
-
-            for image in images:
-                base64_image = self._image_to_base64(image)
-                content.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}",
-                        "detail": "high",
-                    },
-                })
-
-            response = self.client.chat.completions.create(
+            response = self.client.responses.create(
                 model=self.actual_model,
-                max_tokens=8192,  # Increased for multiple pages
-                temperature=self.temperature,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": content,
-                    }
-                ],
+                input=[{"role": "user", "content": content}],
+                max_output_tokens=_MAX_OUTPUT_TOKENS,
             )
-            return response.choices[0].message.content
-
         except Exception as e:
-            raise ProviderAPIError(f"OpenAI API error: {str(e)}") from e
+            raise ProviderAPIError(f"OpenAI API error: {e}") from e
+
+        if response.status == "incomplete":
+            reason = getattr(response.incomplete_details, "reason", "unknown")
+            raise ProviderAPIError(
+                f"OpenAI stopped before finishing (reason: {reason}). "
+                "Try a smaller --batch-size."
+            )
+        if not response.output_text:
+            # A refusal comes back as a completed response with no output text.
+            raise ProviderAPIError(
+                "OpenAI returned no text for this page. "
+                "Try a different provider (e.g., -m gemini-flash)."
+            )
+        return response.output_text
 
     def is_available(self) -> bool:
         """Check if OpenAI is available"""
@@ -132,12 +119,7 @@ class OpenAIProvider(VisionProvider):
 
     def get_display_name(self) -> str:
         """Get display name"""
-        if self.actual_model == self.DEFAULT_MODEL:
-            return "GPT-4o"
-        elif self.actual_model == self.DEFAULT_MINI_MODEL:
-            return "GPT-4o Mini"
-        else:
-            return f"OpenAI ({self.actual_model})"
+        return f"OpenAI ({self.actual_model})"
 
     @staticmethod
     def _image_to_base64(image: Image.Image) -> str:
@@ -155,7 +137,7 @@ class OpenAIProvider(VisionProvider):
         List available OpenAI vision models.
 
         Args:
-            api_key: OpenAI API key (optional)
+            api_key: OpenAI API key (optional; without it a static list is returned)
 
         Returns:
             List of available model names
@@ -163,26 +145,24 @@ class OpenAIProvider(VisionProvider):
         if openai is None:
             return []
 
-        # Try to dynamically fetch models if API key is available
         if api_key:
             try:
                 client = openai.OpenAI(api_key=api_key)
-                available_models = []
-                for model in client.models.list():
-                    # Filter for vision-capable models (gpt-4o variants)
-                    if "gpt-4o" in model.id or "gpt-4-vision" in model.id:
-                        available_models.append(model.id)
+                available_models = sorted(
+                    model.id
+                    for model in client.models.list()
+                    if model.id.startswith("gpt-")
+                    and not any(marker in model.id for marker in _NON_VISION_MARKERS)
+                )
                 if available_models:
-                    return sorted(available_models)
-            except Exception:
-                pass  # Fall back to static list
+                    return available_models
+            except Exception as e:
+                print(f"Could not list OpenAI models from the API: {e}", file=sys.stderr)
 
-        # Return known OpenAI vision models (static fallback)
+        # Static fallback: current models (checked November 2026)
         return [
-            cls.DEFAULT_MODEL,       # gpt-4o
-            cls.DEFAULT_MINI_MODEL,  # gpt-4o-mini
-            "gpt-4o-2024-11-20",
-            "gpt-4o-2024-08-06",
-            "gpt-4o-2024-05-13",
-            "gpt-4o-mini-2024-07-18",
+            "gpt-6.2-astra",
+            cls.DEFAULT_MODEL,
+            "gpt-6.1-terra",
+            cls.DEFAULT_MINI_MODEL,
         ]
