@@ -125,6 +125,7 @@ def create_provider(
             model=model,
             temperature=temperature,
             use_sonnet=options.get("use_sonnet", True),
+            temperature_was_set=temperature_was_set,
         )
 
     elif provider_name == "google":

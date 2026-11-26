@@ -159,3 +159,111 @@ class TestGoogleProvider:
         models = GoogleProvider.list_available_models(api_key=None)
         assert GoogleProvider.DEFAULT_FLASH_MODEL in models
         assert GoogleProvider.DEFAULT_PRO_MODEL in models
+
+
+# ---------------------------------------------------------------------------
+# AnthropicProvider
+# ---------------------------------------------------------------------------
+
+from supernote_utils.providers import anthropic as anthropic_module  # noqa: E402
+from supernote_utils.providers.anthropic import AnthropicProvider  # noqa: E402
+
+
+def _claude_response(text: str = "transcribed", stop_reason: str = "end_turn", thinking=True):
+    blocks = []
+    if thinking:
+        # Current models think by default; the thinking block comes before the text.
+        blocks.append(SimpleNamespace(type="thinking", thinking=""))
+    blocks.append(SimpleNamespace(type="text", text=text))
+    return SimpleNamespace(content=blocks, stop_reason=stop_reason, stop_details=None)
+
+
+@pytest.fixture
+def fake_anthropic_client(monkeypatch):
+    client = MagicMock()
+    client.beta.messages.create.return_value = _claude_response()
+    client_cls = MagicMock(return_value=client)
+    monkeypatch.setattr(anthropic_module.anthropic, "Anthropic", client_cls)
+    client.client_cls = client_cls
+    return client
+
+
+class TestAnthropicProvider:
+    def test_default_models_are_current(self, fake_anthropic_client):
+        assert AnthropicProvider(api_key="k").actual_model == "claude-sonnet-5-5"
+        assert AnthropicProvider(api_key="k", use_sonnet=False).actual_model == "claude-haiku-5-5"
+
+    def test_missing_api_key_raises(self, fake_anthropic_client):
+        with pytest.raises(ProviderNotAvailableError):
+            AnthropicProvider(api_key="")
+
+    def test_returns_text_block_after_thinking_block(self, fake_anthropic_client):
+        provider = AnthropicProvider(api_key="k")
+        assert provider.transcribe_image(_image(), "PROMPT") == "transcribed"
+
+    def test_does_not_send_temperature(self, fake_anthropic_client):
+        # Current Claude models accept only the default sampling settings.
+        provider = AnthropicProvider(api_key="k", temperature=0.7, temperature_was_set=True)
+        provider.transcribe_image(_image(), "PROMPT")
+        kwargs = fake_anthropic_client.beta.messages.create.call_args.kwargs
+        assert "temperature" not in kwargs
+
+    def test_warns_when_temperature_set_explicitly(self, fake_anthropic_client, capsys):
+        AnthropicProvider(api_key="k", temperature=0.7, temperature_was_set=True)
+        assert "ignored" in capsys.readouterr().err
+
+    def test_batch_sends_all_images_in_one_call(self, fake_anthropic_client):
+        provider = AnthropicProvider(api_key="k")
+        provider.transcribe_images_batch([_image(), _image(), _image()], "PROMPT")
+
+        fake_anthropic_client.beta.messages.create.assert_called_once()
+        content = fake_anthropic_client.beta.messages.create.call_args.kwargs["messages"][0]["content"]
+        assert content[0] == {"type": "text", "text": "PROMPT"}
+        assert [block["type"] for block in content[1:]] == ["image"] * 3
+
+    def test_sonnet_requests_server_side_refusal_fallback(self, fake_anthropic_client):
+        AnthropicProvider(api_key="k").transcribe_image(_image(), "PROMPT")
+        kwargs = fake_anthropic_client.beta.messages.create.call_args.kwargs
+        assert kwargs["fallbacks"] == "default"
+        assert kwargs["betas"] == ["server-side-fallback-2026-07-01"]
+
+    def test_haiku_does_not_request_fallback(self, fake_anthropic_client):
+        # Haiku has no server-side fallback; sending the parameter would be rejected.
+        AnthropicProvider(api_key="k", use_sonnet=False).transcribe_image(_image(), "PROMPT")
+        kwargs = fake_anthropic_client.beta.messages.create.call_args.kwargs
+        assert "fallbacks" not in kwargs
+        assert "betas" not in kwargs
+
+    def test_refusal_raises(self, fake_anthropic_client):
+        fake_anthropic_client.beta.messages.create.return_value = _claude_response(
+            text="", stop_reason="refusal"
+        )
+        with pytest.raises(ProviderAPIError, match="declined"):
+            AnthropicProvider(api_key="k").transcribe_image(_image(), "PROMPT")
+
+    def test_max_tokens_raises(self, fake_anthropic_client):
+        fake_anthropic_client.beta.messages.create.return_value = _claude_response(
+            stop_reason="max_tokens"
+        )
+        with pytest.raises(ProviderAPIError, match="max_tokens"):
+            AnthropicProvider(api_key="k").transcribe_image(_image(), "PROMPT")
+
+    def test_sdk_error_is_wrapped(self, fake_anthropic_client):
+        fake_anthropic_client.beta.messages.create.side_effect = RuntimeError("boom")
+        with pytest.raises(ProviderAPIError, match="boom"):
+            AnthropicProvider(api_key="k").transcribe_image(_image(), "PROMPT")
+
+
+# ---------------------------------------------------------------------------
+# Provider factory
+# ---------------------------------------------------------------------------
+
+from supernote_utils.config import ProviderConfig  # noqa: E402
+from supernote_utils.providers import create_provider, parse_model_spec  # noqa: E402
+
+
+class TestCreateProvider:
+    def test_passes_temperature_was_set_to_anthropic(self, fake_anthropic_client, capsys):
+        config = ProviderConfig(anthropic_api_key="k", google_api_key=None)
+        create_provider("claude", config, temperature=0.5, temperature_was_set=True)
+        assert "ignored" in capsys.readouterr().err
