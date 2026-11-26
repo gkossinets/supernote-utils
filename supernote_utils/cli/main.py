@@ -69,11 +69,11 @@ examples:
   supernote transcribe input.pdf -o output.md -m claude-sonnet
 
   # Convert .note to PDF
-  supernote convert note2pdf input.note output.pdf
+  supernote convert input.note -o output.pdf
 
 for more help on a specific command:
   supernote transcribe --help
-  supernote convert note2pdf --help
+  supernote convert --help
         """
     )
 

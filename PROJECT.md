@@ -13,16 +13,24 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - Multi-file input with `-d` (output directory) or `-o` (combined output file)
 - `-t` flag for output type: `markdown`, `plain-text`, `pdf`
 - Providers: Anthropic (Claude), Google (Gemini, via `google-genai`), OpenAI (Responses API, optional `[openai]` extra), Ollama (local)
-- Batch processing (default: 3 pages per API call); configurable with `--batch-size`
-- `supernote convert note2pdf` for visual PDF rendering from .note files
+- Batch processing (default: 5 pages per API call); configurable with `--batch-size`
+- `supernote convert input.note [-o output.pdf]` for visual PDF rendering from .note files
 - `supernote list-models` queries all providers for available models
-- Test suite in `test/` with NLP metrics (WER, CER, BLEU, semantic similarity)
+- Offline unit test suite in `test/` (provider SDK clients are mocked; no API keys needed)
+- `misc/calibrate.py` scores transcription quality against a reference (WER, CER, BLEU, Levenshtein, semantic similarity)
 
 ### Known limitations
 - Proper nouns with diacritics: 5-10% error rate depending on model
 - Cyrillic content: higher error rates, model-dependent
 - PDF text extraction falls back to image rendering when no embedded images exist
 - Handwritten date headers: models misread year digits (2026 as 2020/2024) and may then shift the day or weekday to make the wrong date consistent. Mitigated by the date rule, the filename date hint, and the header check (below); not eliminated
+
+### Repository and release (2026-11-26)
+- **v0.3.0 released**: the first GitHub release, an annotated tag `v0.3.0`. Install with `pip install "git+https://github.com/gkossinets/supernote-utils.git@v0.3.0"`. Later docs-only commits on `main` aren't in the tag.
+- **No CI.** GitHub Actions is turned off in the repo settings, and `.github/` is gone: the Gemini CLI workflow templates were removed first, then the short-lived `ci.yml`. Before committing, run `pytest` and `ruff check supernote_utils/` locally; all tests are offline.
+- **No secrets or variables** remain in the repo settings. `GEMINI_API_KEY` and `GOOGLE_GENAI_USE_GCA` were deleted with the Gemini workflows that used them.
+- **Only `main`** exists on GitHub. The four merged `claude/...` branches (PRs #5, #7, #9, #10) were deleted. Their history is in `main` and the merged PRs.
+- **No handwriting images in the README**, at the owner's request. The top of the README shows the sample command and its text output only. The removed screenshot is still in the v0.3.0 tag and in git history (commit `7612895`).
 
 ---
 
@@ -43,13 +51,13 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 
 **Date headers (2026-10-29):** In a real journal corpus (~250 daily pages, Gemini Flash), about 11% of transcribed date headers had a wrong year, and in several the day or weekday had been shifted to agree with the misread year. The prompt's "Logic is Law" rule invited that reconciliation. Three changes: (1) a strict rule in the prompt to transcribe dates, times, and numbers digit by digit and never reconcile a date with its weekday, with "Logic is Law" limited to words; (2) `--date-hint` (default `auto`) passes the date from the input filename to the model as a hint, explicitly subordinate to clear handwriting; (3) after transcription, `core/dates.py` compares the first date in the output with the expected date and checks the weekday, printing warnings to stderr. The text is never corrected automatically, because late-night entries can legitimately carry the next day's date.
 
-**Batch processing default: 3 pages** — batching images into a single API call is faster and cheaper than per-page calls. Providers that support multi-image input handle this natively; others fall back to serial calls.
+**Batch processing default: 5 pages** — batching images into a single API call is faster and cheaper than per-page calls. Providers that support multi-image input handle this natively; others fall back to serial calls.
 
 ---
 
 ## Model Quality Findings
 
-From test runs on the `test/test.note` benchmark (3-page mixed-language document):
+From test runs on the `test/test.note` benchmark (2-page mixed-language document):
 
 | Provider | Relative Quality | Notes |
 |----------|-----------------|-------|
@@ -102,11 +110,12 @@ The Python CLI (`supernote-utils`) would remain as the reference implementation 
 
 ## Test Files
 
-`test/test.note` — 3-page benchmark document containing:
+`test/test.note` — 2-page benchmark document containing:
 - Mixed languages: English, Russian, French, German proper nouns
 - Formatting: highlights, stars, headers, tables, lists, poetry with specific line breaks
 
-`test/test-transcribed.md` — manually verified reference transcription used for metric calculation.
+`misc/test-transcribed.md` — manually verified reference transcription of `test/test.note`, used by `misc/calibrate.py`.
 
-`test/outputs/` — per-model transcription outputs from benchmark runs.
-`test/results/` — timestamped comparison reports from `test_transcription2.py`.
+`misc/results/` — timestamped comparison reports written by `misc/calibrate.py` (`run_TIMESTAMP.md`).
+
+`test/results/` — gitignored; holds old local reports from the removed `test_transcription2.py`.
