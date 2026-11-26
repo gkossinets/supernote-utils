@@ -2,12 +2,10 @@
 
 import sys
 from pathlib import Path
-from typing import List
 
 from PIL import Image
 
 from supernote_utils.exceptions import FileFormatError
-
 from supernote_utils.note_format import parser
 from supernote_utils.note_format.converter import ImageConverter
 
@@ -16,7 +14,7 @@ class NoteFileHandler:
     """Handles extraction of images from Supernote .note files"""
 
     @staticmethod
-    def extract_images(note_path: Path) -> List[Image.Image]:
+    def extract_images(note_path: Path) -> list[Image.Image]:
         """
         Extract page images directly from .note file.
 

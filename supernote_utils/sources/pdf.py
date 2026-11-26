@@ -3,7 +3,6 @@
 import io
 import sys
 from pathlib import Path
-from typing import List
 
 from PIL import Image
 
@@ -21,7 +20,7 @@ class PDFFileHandler:
     """Handles extraction of images from PDF files"""
 
     @staticmethod
-    def extract_embedded_images(pdf_path: Path) -> List[Image.Image]:
+    def extract_embedded_images(pdf_path: Path) -> list[Image.Image]:
         """
         Extract embedded images directly from PDF.
 
@@ -63,7 +62,7 @@ class PDFFileHandler:
         return images
 
     @staticmethod
-    def render_pages(pdf_path: Path, dpi: int = 150) -> List[Image.Image]:
+    def render_pages(pdf_path: Path, dpi: int = 150) -> list[Image.Image]:
         """
         Render PDF pages to images.
 
@@ -95,7 +94,7 @@ class PDFFileHandler:
     @staticmethod
     def extract_images(
         pdf_path: Path, force_render: bool = False, dpi: int = 150
-    ) -> List[Image.Image]:
+    ) -> list[Image.Image]:
         """
         Get images from PDF, either by extraction or rendering.
 

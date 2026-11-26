@@ -3,7 +3,6 @@
 import os
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional
 
 
 @dataclass
@@ -15,7 +14,7 @@ class TranscriptionConfig:
     additional_prompt: str = ""
     batch_size: int = 5
     # Date the note's header is expected to carry; added to the prompt as a hint when set
-    expected_date: Optional[date] = None
+    expected_date: date | None = None
 
     def __post_init__(self):
         """Validate configuration"""
@@ -30,10 +29,10 @@ class ProviderConfig:
     """Configuration for LLM providers"""
 
     # API keys (can be set via environment or directly)
-    anthropic_api_key: Optional[str] = field(
+    anthropic_api_key: str | None = field(
         default_factory=lambda: os.getenv("ANTHROPIC_API_KEY")
     )
-    google_api_key: Optional[str] = field(
+    google_api_key: str | None = field(
         default_factory=lambda: os.getenv("GOOGLE_API_KEY")
     )
 
@@ -41,9 +40,9 @@ class ProviderConfig:
     ollama_base_url: str = "http://localhost:11434"
 
     # Model overrides
-    anthropic_model: Optional[str] = None
-    google_model: Optional[str] = None
-    ollama_model: Optional[str] = None
+    anthropic_model: str | None = None
+    google_model: str | None = None
+    ollama_model: str | None = None
 
     @classmethod
     def from_env(cls) -> "ProviderConfig":

@@ -6,7 +6,6 @@ Unified transcribe command handler
 import sys
 from datetime import date
 from pathlib import Path
-from typing import List, Optional
 
 from supernote_utils.config import ProviderConfig, TranscriptionConfig
 from supernote_utils.core.dates import check_header_date, date_from_filename
@@ -14,7 +13,6 @@ from supernote_utils.core.transcriber import Transcriber
 from supernote_utils.providers import create_provider
 from supernote_utils.sources import factory
 from supernote_utils.sources.note import NoteFileHandler
-
 
 FORMAT_EXTENSIONS = {
     'markdown': '.md',
@@ -36,7 +34,7 @@ def _build_provider(args):
 
 
 def _build_transcription_config(
-    args, is_multipage: bool, expected_date: Optional[date] = None
+    args, is_multipage: bool, expected_date: date | None = None
 ) -> TranscriptionConfig:
     """Create a TranscriptionConfig from CLI args."""
     batch_size = args.batch_size if hasattr(args, 'batch_size') else 5
@@ -50,7 +48,7 @@ def _build_transcription_config(
     )
 
 
-def resolve_expected_date(date_hint: str, input_path: Path) -> Optional[date]:
+def resolve_expected_date(date_hint: str, input_path: Path) -> date | None:
     """Resolve the --date-hint option for one input file.
 
     Args:
@@ -67,7 +65,7 @@ def resolve_expected_date(date_hint: str, input_path: Path) -> Optional[date]:
     return date.fromisoformat(date_hint)
 
 
-def _expected_date_for(args, input_path: Path) -> Optional[date]:
+def _expected_date_for(args, input_path: Path) -> date | None:
     """Resolve the expected date for one input from CLI args, and log it when set."""
     expected = resolve_expected_date(getattr(args, 'date_hint', 'auto'), input_path)
     if expected:
@@ -75,7 +73,7 @@ def _expected_date_for(args, input_path: Path) -> Optional[date]:
     return expected
 
 
-def _report_header_date(text: str, expected_date: Optional[date], input_path: Path) -> None:
+def _report_header_date(text: str, expected_date: date | None, input_path: Path) -> None:
     """Warn on stderr when a transcription's date header does not match the expected date.
 
     The transcription itself is left as the model wrote it; a person decides what is right.
@@ -125,7 +123,7 @@ def _determine_target_format(args) -> str:
 
 def _transcribe_combined(
     args,
-    input_paths: List[Path],
+    input_paths: list[Path],
     output_path: Path,
     target_format: str,
     plain_text: bool,
@@ -149,7 +147,7 @@ def _transcribe_combined(
             sys.exit(1)
 
     provider = _build_provider(args)
-    all_texts: List[str] = []
+    all_texts: list[str] = []
 
     for input_path in input_paths:
         try:
@@ -179,9 +177,9 @@ def _transcribe_combined(
 
 def _transcribe_per_file(
     args,
-    input_paths: List[Path],
+    input_paths: list[Path],
     target_format: str,
-    target_dir: Optional[Path],
+    target_dir: Path | None,
     plain_text: bool,
 ) -> None:
     """Transcribe each input file to its own output, continuing past errors."""
@@ -201,7 +199,7 @@ def _transcribe_per_file(
     provider = _build_provider(args) if target_format != 'pdf' else None
 
     ext = FORMAT_EXTENSIONS[target_format]
-    errors: List[Path] = []
+    errors: list[Path] = []
 
     for input_path in input_paths:
         out_path = (target_dir if target_dir else input_path.parent) / (input_path.stem + ext)

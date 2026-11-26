@@ -3,7 +3,6 @@ Shared transcription prompts for handwriting OCR tasks.
 """
 
 from datetime import date
-from typing import Optional
 
 from supernote_utils.core.dates import WEEKDAYS
 
@@ -58,7 +57,7 @@ def date_hint(expected_date: date) -> str:
     )
 
 
-def get_prompt(additional_instructions: str = "", expected_date: Optional[date] = None) -> str:
+def get_prompt(additional_instructions: str = "", expected_date: date | None = None) -> str:
     """
     Get transcription prompt with an optional date hint and additional instructions.
 

@@ -3,7 +3,6 @@
 import base64
 import io
 import sys
-from typing import List, Optional
 
 from PIL import Image
 
@@ -26,7 +25,7 @@ class OpenAIProvider(VisionProvider):
     def __init__(
         self,
         api_key: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 1.0,
         use_mini: bool = False,
     ):
@@ -95,7 +94,7 @@ class OpenAIProvider(VisionProvider):
         except Exception as e:
             raise ProviderAPIError(f"OpenAI API error: {str(e)}") from e
 
-    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+    def transcribe_images_batch(self, images: list[Image.Image], prompt: str) -> str:
         """Transcribe multiple images in a single API call"""
         try:
             # Build content array with prompt and all images
@@ -151,7 +150,7 @@ class OpenAIProvider(VisionProvider):
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     @classmethod
-    def list_available_models(cls, api_key: Optional[str] = None) -> list[str]:
+    def list_available_models(cls, api_key: str | None = None) -> list[str]:
         """
         List available OpenAI vision models.
 

@@ -1,7 +1,6 @@
 """Image processing utilities for transcription"""
 
 import re
-from typing import List
 
 from PIL import Image
 
@@ -46,7 +45,7 @@ class ImageProcessor:
         return text
 
     @staticmethod
-    def validate_images(images: List[Image.Image]) -> None:
+    def validate_images(images: list[Image.Image]) -> None:
         """
         Validate list of images.
 

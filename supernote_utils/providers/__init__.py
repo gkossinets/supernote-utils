@@ -1,7 +1,5 @@
 """LLM vision provider implementations and factory"""
 
-from typing import Optional
-
 from supernote_utils.config import ProviderConfig
 from supernote_utils.exceptions import ConfigurationError
 from supernote_utils.providers.anthropic import AnthropicProvider
@@ -19,7 +17,7 @@ __all__ = [
 ]
 
 
-def parse_model_spec(model_spec: str) -> tuple[str, Optional[str], dict]:
+def parse_model_spec(model_spec: str) -> tuple[str, str | None, dict]:
     """
     Parse model specification into (provider, model_name, options).
 
@@ -93,7 +91,7 @@ def parse_model_spec(model_spec: str) -> tuple[str, Optional[str], dict]:
 
 def create_provider(
     model_spec: str,
-    config: Optional[ProviderConfig] = None,
+    config: ProviderConfig | None = None,
     temperature: float = 1.0,
     temperature_was_set: bool = False,
 ) -> VisionProvider:

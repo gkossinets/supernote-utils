@@ -1,7 +1,6 @@
 """Abstract base class for LLM vision providers"""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
 from PIL import Image
 
@@ -9,7 +8,7 @@ from PIL import Image
 class VisionProvider(ABC):
     """Abstract base class for vision LLM providers"""
 
-    def __init__(self, model: Optional[str] = None, temperature: float = 1.0):
+    def __init__(self, model: str | None = None, temperature: float = 1.0):
         """
         Initialize provider.
 
@@ -43,7 +42,7 @@ class VisionProvider(ABC):
         """
         pass
 
-    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+    def transcribe_images_batch(self, images: list[Image.Image], prompt: str) -> str:
         """
         Transcribe multiple images in a single API call.
 

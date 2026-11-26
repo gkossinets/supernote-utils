@@ -1,7 +1,6 @@
 """Google Gemini vision provider"""
 
 import sys
-from typing import List, Optional
 
 from PIL import Image
 
@@ -29,7 +28,7 @@ class GoogleProvider(VisionProvider):
     def __init__(
         self,
         api_key: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 1.0,
         use_pro: bool = False,
         temperature_was_set: bool = False,
@@ -67,7 +66,7 @@ class GoogleProvider(VisionProvider):
                 # User didn't set temperature, auto-adjust to 1.0
                 adjusted_temperature = 1.0
                 print(
-                    f"Note: Using temperature=1.0 for Gemini 3 reasoning model (recommended)",
+                    "Note: Using temperature=1.0 for Gemini 3 reasoning model (recommended)",
                     file=sys.stderr,
                 )
             elif temperature < 1.0:
@@ -152,7 +151,7 @@ class GoogleProvider(VisionProvider):
         except Exception as e:
             raise ProviderAPIError(f"Google API error: {str(e)}") from e
 
-    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+    def transcribe_images_batch(self, images: list[Image.Image], prompt: str) -> str:
         """Transcribe multiple images in a single API call"""
         try:
             # Configure safety settings to reduce false positives for OCR tasks
@@ -232,7 +231,7 @@ class GoogleProvider(VisionProvider):
             return f"Gemini ({self.actual_model})"
 
     @classmethod
-    def list_available_models(cls, api_key: Optional[str] = None) -> list[str]:
+    def list_available_models(cls, api_key: str | None = None) -> list[str]:
         """
         List available Gemini vision models.
 

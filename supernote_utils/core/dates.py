@@ -10,7 +10,6 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import List, Optional
 
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -34,11 +33,11 @@ class HeaderDate:
     """
 
     text: str
-    date: Optional[date]
-    weekday: Optional[str]
+    date: date | None
+    weekday: str | None
 
 
-def _make_date(year: str, month: str, day: str) -> Optional[date]:
+def _make_date(year: str, month: str, day: str) -> date | None:
     """Build a date from digit strings, or return None if it is not a valid date."""
     try:
         return date(int(year), int(month), int(day))
@@ -46,7 +45,7 @@ def _make_date(year: str, month: str, day: str) -> Optional[date]:
         return None
 
 
-def date_from_filename(path: Path) -> Optional[date]:
+def date_from_filename(path: Path) -> date | None:
     """Return the date encoded in a filename (YYYYMMDD or YYYY-MM-DD), if any.
 
     Only the file's stem is searched, not its directories.
@@ -64,7 +63,7 @@ def date_from_filename(path: Path) -> Optional[date]:
     return None
 
 
-def parse_weekday(token: str) -> Optional[int]:
+def parse_weekday(token: str) -> int | None:
     """Return the weekday number (Monday=0) for a written weekday, or None.
 
     Accepts full names and abbreviations of three or more letters ("SUN", "Tues", "Thur").
@@ -84,7 +83,7 @@ def parse_weekday(token: str) -> Optional[int]:
     return None
 
 
-def find_header_date(text: str, max_lines: int = HEADER_SEARCH_LINES) -> Optional[HeaderDate]:
+def find_header_date(text: str, max_lines: int = HEADER_SEARCH_LINES) -> HeaderDate | None:
     """Find the first YYYY-MM-DD date in the first non-empty lines of a transcription.
 
     Args:
@@ -106,7 +105,7 @@ def find_header_date(text: str, max_lines: int = HEADER_SEARCH_LINES) -> Optiona
     return None
 
 
-def check_header_date(text: str, expected: date) -> List[str]:
+def check_header_date(text: str, expected: date) -> list[str]:
     """Compare a transcription's date header with the expected date.
 
     Reports problems for a person to review; never changes the text. A late-night entry may

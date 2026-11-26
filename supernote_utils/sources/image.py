@@ -1,7 +1,6 @@
 """Image file handler for PNG, JPEG, WEBP formats"""
 
 from pathlib import Path
-from typing import List
 
 from PIL import Image
 
@@ -14,7 +13,7 @@ class ImageFileHandler:
     SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
     @classmethod
-    def extract_images(cls, path: Path, **kwargs) -> List[Image.Image]:
+    def extract_images(cls, path: Path, **kwargs) -> list[Image.Image]:
         """
         Load image file and return as single-item list.
 

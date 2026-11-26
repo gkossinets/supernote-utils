@@ -2,7 +2,6 @@
 
 import io
 import sys
-from typing import List, Optional
 
 from PIL import Image
 
@@ -34,7 +33,7 @@ class OllamaProvider(VisionProvider):
 
     def __init__(
         self,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 1.0,
         base_url: str = "http://localhost:11434",
     ):
@@ -96,7 +95,7 @@ class OllamaProvider(VisionProvider):
         except Exception as e:
             raise ProviderAPIError(f"Ollama API error: {str(e)}") from e
 
-    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+    def transcribe_images_batch(self, images: list[Image.Image], prompt: str) -> str:
         """Transcribe multiple images in a single API call"""
         try:
             # Convert all images to bytes
@@ -137,7 +136,7 @@ class OllamaProvider(VisionProvider):
         """Get display name"""
         return f"Ollama ({self.actual_model})"
 
-    def _detect_vision_model(self) -> Optional[str]:
+    def _detect_vision_model(self) -> str | None:
         """Detect first available vision model from Ollama"""
         try:
             models = ollama.list()
@@ -171,7 +170,7 @@ class OllamaProvider(VisionProvider):
         return buffered.getvalue()
 
     @classmethod
-    def list_available_models(cls, api_key: Optional[str] = None) -> list[str]:
+    def list_available_models(cls, api_key: str | None = None) -> list[str]:
         """
         List all available vision models in Ollama.
 

@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import List, Optional, TextIO
+from typing import TextIO
 
 from PIL import Image
 
@@ -15,7 +15,7 @@ from supernote_utils.providers.base import VisionProvider
 class Transcriber:
     """Unified transcription engine that works with any provider and source"""
 
-    def __init__(self, provider: VisionProvider, config: Optional[TranscriptionConfig] = None):
+    def __init__(self, provider: VisionProvider, config: TranscriptionConfig | None = None):
         """
         Initialize transcriber.
 
@@ -53,8 +53,8 @@ class Transcriber:
 
     def transcribe_images(
         self,
-        images: List[Image.Image],
-        output: Optional[TextIO] = None,
+        images: list[Image.Image],
+        output: TextIO | None = None,
         plain_text: bool = False,
     ) -> str:
         """
@@ -83,8 +83,8 @@ class Transcriber:
 
     def _transcribe_single_pages(
         self,
-        images: List[Image.Image],
-        output: Optional[TextIO] = None,
+        images: list[Image.Image],
+        output: TextIO | None = None,
         plain_text: bool = False,
     ) -> str:
         """
@@ -129,8 +129,8 @@ class Transcriber:
 
     def _transcribe_with_batching(
         self,
-        images: List[Image.Image],
-        output: Optional[TextIO] = None,
+        images: list[Image.Image],
+        output: TextIO | None = None,
         plain_text: bool = False,
     ) -> str:
         """
@@ -190,7 +190,7 @@ class Transcriber:
             output.write("\n")
             return ""
 
-    def _transcribe_batch(self, batch_images: List[Image.Image], page_nums: List[int]) -> str:
+    def _transcribe_batch(self, batch_images: list[Image.Image], page_nums: list[int]) -> str:
         """
         Transcribe a batch of images.
 
@@ -222,7 +222,7 @@ class Transcriber:
 
         return text
 
-    def _transcribe_batch_fallback(self, batch_images: List[Image.Image], page_nums: List[int]) -> str:
+    def _transcribe_batch_fallback(self, batch_images: list[Image.Image], page_nums: list[int]) -> str:
         """
         Fallback to single-page processing for a batch.
 
@@ -262,8 +262,8 @@ class Transcriber:
 
     def transcribe_file(
         self,
-        images: List[Image.Image],
-        output_path: Optional[Path] = None,
+        images: list[Image.Image],
+        output_path: Path | None = None,
         plain_text: bool = False,
     ) -> None:
         """

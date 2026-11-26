@@ -263,7 +263,7 @@ examples:
     )
 
     # List models command
-    list_models_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "list-models",
         help="List available models from all providers",
         formatter_class=argparse.RawDescriptionHelpFormatter,

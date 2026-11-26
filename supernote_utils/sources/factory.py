@@ -1,7 +1,6 @@
 """Unified source file handler factory"""
 
 from pathlib import Path
-from typing import Dict, List, Tuple, Type
 
 from PIL import Image
 
@@ -10,9 +9,8 @@ from supernote_utils.sources.image import ImageFileHandler
 from supernote_utils.sources.note import NoteFileHandler
 from supernote_utils.sources.pdf import PDFFileHandler
 
-
 # Mapping of file extensions to handler classes
-SUPPORTED_EXTENSIONS: Dict[str, Tuple[Type, str]] = {
+SUPPORTED_EXTENSIONS: dict[str, tuple[type, str]] = {
     ".note": (NoteFileHandler, "Supernote"),
     ".pdf": (PDFFileHandler, "PDF"),
     ".png": (ImageFileHandler, "PNG image"),
@@ -22,7 +20,7 @@ SUPPORTED_EXTENSIONS: Dict[str, Tuple[Type, str]] = {
 }
 
 
-def get_handler(path: Path) -> Tuple[Type, str]:
+def get_handler(path: Path) -> tuple[type, str]:
     """
     Get appropriate handler class for file format.
 
@@ -47,7 +45,7 @@ def get_handler(path: Path) -> Tuple[Type, str]:
     return SUPPORTED_EXTENSIONS[ext]
 
 
-def extract_images(path: Path, **kwargs) -> List[Image.Image]:
+def extract_images(path: Path, **kwargs) -> list[Image.Image]:
     """
     Extract images from file using appropriate handler.
 
