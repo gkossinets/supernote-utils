@@ -30,7 +30,7 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - **No CI.** GitHub Actions is turned off in the repo settings, and `.github/` is gone: the Gemini CLI workflow templates were removed first, then the short-lived `ci.yml`. Before committing, run `pytest` and `ruff check supernote_utils/` locally; all tests are offline.
 - **No secrets or variables** remain in the repo settings. `GEMINI_API_KEY` and `GOOGLE_GENAI_USE_GCA` were deleted with the Gemini workflows that used them.
 - **Only `main`** exists on GitHub. The four merged `claude/...` branches (PRs #5, #7, #9, #10) were deleted. Their history is in `main` and the merged PRs.
-- **No handwriting images in the README**, at the owner's request. The top of the README shows the sample command and its text output only. The removed screenshot is still in the v0.3.0 tag and in git history (commit `7612895`).
+- **No examples at the top of the README**, at the owner's request: no handwriting images and no sample transcription. The removed screenshot is still in the v0.3.0 tag and in git history (commit `7612895`).
 
 ---
 

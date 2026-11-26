@@ -2,23 +2,6 @@
 
 Python utilities for managing and transcribing handwritten notes from Ratta Supernote tablets.
 
-```bash
-supernote transcribe test/test.note -o notes.md
-```
-
-```markdown
-**2025-10-20 MON** at home
-
-This is a test handwritten document. It contains text in English and Russian with some
-French and German names. It also contains lists, poems, starred paragraphs, headers, ==highlights.==
-
-☆ We think of short films as proofs of concepts for features, but most short films are just
-a medium in itself, they just tell a short story. Do you have an ability to take it further,
-or do you just think, this is what happened to me one day...
-```
-
-*Gemini 3.8 Flash output for the top of `test/test.note` (lines wrapped for display).*
-
 ## Features
 
 - **Universal file transcription** with auto-format detection (.note, .pdf, .png, .jpg, .jpeg, .webp)
