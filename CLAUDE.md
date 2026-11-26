@@ -77,4 +77,5 @@ Claude and OpenAI providers never send `temperature` (current models reject it);
 - `ANTHROPIC_API_KEY` — required for Claude models
 - `GOOGLE_API_KEY` — required for Gemini models
 - `OPENAI_API_KEY` — required for OpenAI models (install the `[openai]` extra)
+- `OPENAI_BASE_URL` — optional; read by the OpenAI SDK itself. Keys from a data-residency project fail with 401 "incorrect regional hostname" unless this is set to the regional endpoint (e.g. `https://us.api.openai.com/v1`)
 - `OLLAMA_BASE_URL` — Ollama server (default `http://localhost:11434`)

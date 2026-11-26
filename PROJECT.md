@@ -70,8 +70,10 @@ Recommended temperatures: Claude 0.2–0.3, Gemini 0.2, Ollama 0.1. (Historical:
 | Claude Opus 5.5 (`claude-opus`) | 0.6%, 0.6% | 2.0%, 2.0% | Лепешка for Лепешки; Переварилась (run 1); Вечерний звон for гонг (run 2) |
 | Claude Sonnet 5.5 (`claude`) | 6.3%, 1.7% | 5.2%, 4.0% | Лененька/Леночка, Переваривал, зайлусь/зайдусь, Привевкой/Привидкой |
 | Gemini 3.8 Flash (one run) | 0.6% | 0.4% | none of substance |
+| OpenAI `gpt` → gpt-6.2-sol (one run) | 0.7% | 0.8% | Перевариваю for Переваривая |
+| OpenAI `gpt-mini` → gpt-6-luna (one run) | 3.8% | 13.9% | Скажи, Ленечке, Перевариваю, and more |
 
-Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6.3% run is mostly layout: it wrote the closing table as two separate columns. For Cyrillic-heavy notes, Gemini Flash (the default) is the best choice of the three, and `claude-opus` is the better Claude option.
+Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6.3% run is mostly layout: it wrote the closing table as two separate columns. Both OpenAI models read "1980" as "1960" (the Fassbinder line), the kind of digit error the date rule targets. For Cyrillic-heavy notes, Gemini Flash (the default) and `gpt` are the most accurate, `claude-opus` is the better Claude option, and `gpt-mini` is the weakest. The OpenAI runs (2026-11-26) were the first live test of the OpenAI provider; it worked end to end through the CLI.
 
 ---
 

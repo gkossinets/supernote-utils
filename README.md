@@ -103,6 +103,8 @@ export GOOGLE_API_KEY="your-key-here"
 
 # For GPT (OpenAI; needs the [openai] extra)
 export OPENAI_API_KEY="your-key-here"
+# Only for keys from a project with data residency (e.g. US), which must use the regional endpoint
+export OPENAI_BASE_URL="https://us.api.openai.com/v1"
 
 # For Ollama (local models) - no key needed, just install:
 # https://ollama.ai/
