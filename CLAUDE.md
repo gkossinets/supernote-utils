@@ -25,8 +25,6 @@ supernote --help
 supernote list-models
 ```
 
-Note: `pytest.ini_options` sets `testpaths = ["tests"]` (plural) but test files live in `test/` (singular). Run pytest with an explicit path: `pytest test/`.
-
 System dependency: `brew install poppler` is required for PDF rendering (`pdf2image` won't work without it).
 
 ## Architecture

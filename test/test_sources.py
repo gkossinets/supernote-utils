@@ -93,3 +93,42 @@ class TestNoteFileHandler:
         from supernote_utils.exceptions import FileFormatError
         with pytest.raises((FileFormatError, Exception)):
             NoteFileHandler.extract_images(tmp_path / "missing.note")
+
+
+# ---------------------------------------------------------------------------
+# PDFFileHandler
+# ---------------------------------------------------------------------------
+
+class TestPDFFileHandler:
+    def _write_pdf_with_image(self, path: Path, image_size=(300, 200)) -> None:
+        from reportlab.lib.utils import ImageReader
+        from reportlab.pdfgen import canvas
+
+        img = Image.new("RGB", image_size, color=(200, 30, 30))
+        c = canvas.Canvas(str(path))
+        c.drawImage(ImageReader(img), 50, 400, width=image_size[0], height=image_size[1])
+        c.showPage()
+        c.save()
+
+    def test_extracts_embedded_image(self, tmp_path):
+        from supernote_utils.sources.pdf import PDFFileHandler
+
+        pdf = tmp_path / "scan.pdf"
+        self._write_pdf_with_image(pdf)
+        images = PDFFileHandler.extract_embedded_images(pdf)
+        assert len(images) == 1
+        assert images[0].size == (300, 200)
+
+    def test_small_embedded_images_are_ignored(self, tmp_path):
+        from supernote_utils.sources.pdf import PDFFileHandler
+
+        pdf = tmp_path / "icon.pdf"
+        self._write_pdf_with_image(pdf, image_size=(50, 50))
+        assert PDFFileHandler.extract_embedded_images(pdf) == []
+
+    def test_uses_pypdf_not_deprecated_pypdf2(self):
+        import supernote_utils.sources.pdf as pdf_module
+
+        # PyPDF2 is deprecated upstream; the maintained successor is pypdf.
+        assert pdf_module.pypdf is not None
+        assert not hasattr(pdf_module, "PyPDF2")

@@ -10,10 +10,10 @@ from PIL import Image
 from supernote_utils.exceptions import FileFormatError
 
 try:
-    import PyPDF2
+    import pypdf
     from pdf2image import convert_from_path
 except ImportError:
-    PyPDF2 = None
+    pypdf = None
     convert_from_path = None
 
 
@@ -31,15 +31,15 @@ class PDFFileHandler:
         Returns:
             List of PIL Images extracted from PDF
         """
-        if PyPDF2 is None:
+        if pypdf is None:
             raise FileFormatError(
-                "PyPDF2 not installed. Install with: pip install PyPDF2"
+                "pypdf not installed. Install with: pip install pypdf"
             )
 
         images = []
         try:
             with open(pdf_path, "rb") as file:
-                pdf_reader = PyPDF2.PdfReader(file)
+                pdf_reader = pypdf.PdfReader(file)
                 for page_num, page in enumerate(pdf_reader.pages, start=1):
                     if page.images:
                         for image_file_object in page.images:

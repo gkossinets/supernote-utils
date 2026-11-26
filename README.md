@@ -16,7 +16,7 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 
 ### Requirements
 
-- Python 3.8 or higher
+- Python 3.11 or higher
 
 ### Quick Install
 

@@ -7,10 +7,10 @@ name = "supernote-utils"
 version = "0.2.0"
 description = "Python utilities for managing and transcribing handwritten notes from Ratta Supernote tablets"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Supernote Utils Contributors"}
+    {name = "Gregory Kossinets"}
 ]
 keywords = ["supernote", "handwriting", "ocr", "transcription", "llm"]
 classifiers = [
@@ -18,11 +18,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
@@ -38,7 +36,7 @@ dependencies = [
     "reportlab>=3.6.1",
 
     # PDF processing
-    "PyPDF2>=3.0.0",
+    "pypdf>=5.0.0",
     "pdf2image>=1.16.0",
 ]
 
@@ -74,20 +72,22 @@ supernote_utils = ["py.typed"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py311"
+# Vendored from supernote-tool; kept close to upstream rather than restyled.
+extend-exclude = ["supernote_utils/note_format"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]  # Line too long (handled by formatter)
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["test"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
