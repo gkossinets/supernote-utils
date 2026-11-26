@@ -63,6 +63,16 @@ Recommended temperatures: Claude 0.2–0.3, Gemini 0.2, Ollama 0.1. (Historical:
 
 2026-11-26 spot check on `test/test.note`: Gemini 3.8 Flash was close to the reference (minor list/table formatting). Claude Sonnet 5.5 was accurate on English but misread several Russian words in the Issa poems ("Вечерний голос", "Ленечка") and the name "Pflaumm".
 
+2026-11-26 Claude comparison on `test/test.note`, two runs each, character error rate (CER) after stripping Markdown formatting:
+
+| Model | CER, all text | CER, Russian only | Russian errors |
+|---|---|---|---|
+| Claude Opus 5.5 (`claude-opus`) | 0.6%, 0.6% | 2.0%, 2.0% | Лепешка for Лепешки; Переварилась (run 1); Вечерний звон for гонг (run 2) |
+| Claude Sonnet 5.5 (`claude`) | 6.3%, 1.7% | 5.2%, 4.0% | Лененька/Леночка, Переваривал, зайлусь/зайдусь, Привевкой/Привидкой |
+| Gemini 3.8 Flash (one run) | 0.6% | 0.4% | none of substance |
+
+Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6.3% run is mostly layout: it wrote the closing table as two separate columns. For Cyrillic-heavy notes, Gemini Flash (the default) is the best choice of the three, and `claude-opus` is the better Claude option.
+
 ---
 
 ## Future Direction
