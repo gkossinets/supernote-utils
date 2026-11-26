@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      # The [test] extra also carries the calibration script's NLP stack (torch via
+      # sentence-transformers), which the unit tests don't use.
+      - name: Install
+        run: pip install -e ".[openai]" pytest pytest-cov ruff
+      - name: Lint
+        run: ruff check supernote_utils/
+      - name: Test
+        # All tests are offline: provider SDK clients are mocked, so no API keys needed.
+        run: pytest test/
