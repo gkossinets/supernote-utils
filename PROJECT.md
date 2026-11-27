@@ -148,6 +148,7 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 
 ### Open questions
 - **Memory guidance.** `ollama ps` on the M1 Max shows gemma4:26b-a4b at 16–17 GB and qwen3.5:9b at about 8 GB once loaded, which fits the README's "32 GB / 16 GB" with room for the OS. Still unchecked on smaller machines.
+- **Low thinking and dates.** Gemini 3+ now uses low thinking, measured only on pages with a few numbers and no year (every digit right in 44 page runs at both levels). Year misreads in date headers (~11% on ~250 journal pages, at default thinking) are the known weak spot. Test: run ~100+ dated pages through Gemini Flash at low and default thinking and compare the counts of header-date warnings (no reference transcriptions needed). If low is worse, go back to default thinking for Flash.
 - **A flag for the thinking level?** Gemini 3+ now always uses low thinking. If a hard page ever needs more, a `--thinking` option could expose the level for every provider (Gemini level, Claude/OpenAI effort).
 - **Resume/checkpoint** support for large documents (partial transcription on failure).
 - **HTML report** output from the test suite.
