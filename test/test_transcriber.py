@@ -63,10 +63,10 @@ class TestTranscriberSinglePageMode:
         assert result == "hello"
 
     def test_multiple_images_joined(self):
-        provider = FixedProvider("page")
+        provider = FixedProvider("A page.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=1))
         result = t.transcribe_images(make_images(3))
-        assert result == "page\n\npage\n\npage"
+        assert result == "A page.\n\nA page.\n\nA page."
 
     def test_single_page_calls_transcribe_image_not_batch(self):
         provider = FixedProvider()
@@ -89,10 +89,10 @@ class TestTranscriberSinglePageMode:
 
 class TestTranscriberBatchMode:
     def test_batch_calls_transcribe_images_batch(self):
-        provider = FixedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb\n<!-- page 3 -->\nc")
+        provider = FixedProvider("<!-- page 1 -->\nA.\n<!-- page 2 -->\nB.\n<!-- page 3 -->\nC.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=3))
         result = t.transcribe_images(make_images(3))
-        assert result == "a\n\nb\n\nc"
+        assert result == "A.\n\nB.\n\nC."
         assert provider.batch_call_count == 1
         assert provider.single_call_count == 0
 
@@ -178,7 +178,7 @@ class ScriptedProvider(FixedProvider):
 
     def transcribe_image(self, image: Image.Image, prompt: str) -> str:
         self.single_call_count += 1
-        return f"redo {self.single_call_count}"
+        return f"Redo {self.single_call_count}."
 
     def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
         self.batch_call_count += 1
@@ -188,69 +188,184 @@ class ScriptedProvider(FixedProvider):
 
 class TestBatchPageCheck:
     def test_batch_prompt_asks_for_page_markers(self):
-        provider = ScriptedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb")
+        provider = ScriptedProvider("<!-- page 1 -->\nA.\n<!-- page 2 -->\nB.")
         Transcriber(provider, TranscriptionConfig(batch_size=2)).transcribe_images(make_images(2))
         assert "<!-- page 1 -->" in provider.last_batch_prompt
         assert "<!-- page 2 -->" in provider.last_batch_prompt
 
     def test_markers_are_removed_from_output(self):
-        provider = ScriptedProvider("<!-- page 1 -->\nfirst\n\n<!-- page 2 -->\nsecond")
+        provider = ScriptedProvider("<!-- page 1 -->\nFirst.\n\n<!-- page 2 -->\nSecond.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2))
-        assert t.transcribe_images(make_images(2)) == "first\n\nsecond"
+        assert t.transcribe_images(make_images(2)) == "First.\n\nSecond."
         assert provider.single_call_count == 0
 
     def test_missing_page_is_redone_alone(self, capsys):
-        provider = ScriptedProvider("<!-- page 1 -->\nfirst\n<!-- page 3 -->\nthird")
+        provider = ScriptedProvider("<!-- page 1 -->\nFirst.\n<!-- page 3 -->\nThird.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=3))
-        assert t.transcribe_images(make_images(3)) == "first\n\nredo 1\n\nthird"
+        assert t.transcribe_images(make_images(3)) == "First.\n\nRedo 1.\n\nThird."
         assert provider.single_call_count == 1
         assert "page 2" in capsys.readouterr().err
 
     def test_page_numbers_are_relative_to_the_batch(self):
         # Pages 4-5 of a document are pages 1-2 of the second batch.
-        provider = ScriptedProvider("<!-- page 1 -->\nx\n<!-- page 2 -->\ny")
+        provider = ScriptedProvider("<!-- page 1 -->\nX.\n<!-- page 2 -->\nY.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=3))
         result = t.transcribe_images(make_images(5))
         assert provider.single_call_count == 1  # page 3 of the first batch is missing
-        assert result == "x\n\ny\n\nredo 1\n\nx\n\ny"
+        assert result == "X.\n\nY.\n\nRedo 1.\n\nX.\n\nY."
 
     def test_no_markers_redoes_every_page(self, capsys):
         provider = ScriptedProvider("unmarked text")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2))
-        assert t.transcribe_images(make_images(2)) == "redo 1\n\nredo 2"
+        assert t.transcribe_images(make_images(2)) == "Redo 1.\n\nRedo 2."
         assert "no page markers" in capsys.readouterr().err
 
     def test_empty_page_counts_as_present(self):
-        provider = ScriptedProvider("<!-- page 1 -->\n<!-- page 2 -->\nsecond")
+        provider = ScriptedProvider("<!-- page 1 -->\n<!-- page 2 -->\nSecond.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2))
-        assert t.transcribe_images(make_images(2)) == "second"
+        assert t.transcribe_images(make_images(2)) == "Second."
         assert provider.single_call_count == 0
 
     def test_text_before_first_marker_is_kept(self, capsys):
-        provider = ScriptedProvider("stray\n<!-- page 1 -->\na\n<!-- page 2 -->\nb")
+        provider = ScriptedProvider("Stray.\n<!-- page 1 -->\nA.\n<!-- page 2 -->\nB.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2))
-        assert t.transcribe_images(make_images(2)) == "stray\na\n\nb"
+        assert t.transcribe_images(make_images(2)) == "Stray.\nA.\n\nB."
         assert "before the first page marker" in capsys.readouterr().err
 
     def test_marker_spacing_and_case_are_tolerated(self):
-        provider = ScriptedProvider("<!--Page 1-->\na\n  <!--  PAGE 2  -->  \nb")
+        provider = ScriptedProvider("<!--Page 1-->\nA.\n  <!--  PAGE 2  -->  \nB.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2))
-        assert t.transcribe_images(make_images(2)) == "a\n\nb"
+        assert t.transcribe_images(make_images(2)) == "A.\n\nB."
 
     def test_out_of_range_marker_is_reported(self, capsys):
-        provider = ScriptedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb\n<!-- page 7 -->\nc")
+        provider = ScriptedProvider("<!-- page 1 -->\nA.\n<!-- page 2 -->\nB.\n<!-- page 7 -->\nC.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2))
-        assert t.transcribe_images(make_images(2)) == "a\n\nb\n\nc"
+        assert t.transcribe_images(make_images(2)) == "A.\n\nB.\n\nC."
         assert "page 7" in capsys.readouterr().err
 
     def test_page_separators_are_per_page_in_batch_mode(self):
-        provider = ScriptedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb")
+        provider = ScriptedProvider("<!-- page 1 -->\nA.\n<!-- page 2 -->\nB.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2, page_separator=True))
         buf = io.StringIO()
         t.transcribe_images(make_images(2), output=buf)
-        assert buf.getvalue() == "---- Page 1 ----\na\n\n---- Page 2 ----\nb\n"
+        assert buf.getvalue() == "---- Page 1 ----\nA.\n\n---- Page 2 ----\nB.\n"
 
     def test_markers_are_stripped_before_plain_text_conversion(self):
-        provider = ScriptedProvider("<!-- page 1 -->\n**a**\n<!-- page 2 -->\nb")
+        provider = ScriptedProvider("<!-- page 1 -->\n**A.**\n<!-- page 2 -->\nB.")
         t = Transcriber(provider, TranscriptionConfig(batch_size=2))
-        assert t.transcribe_images(make_images(2), plain_text=True) == "a\n\nb"
+        assert t.transcribe_images(make_images(2), plain_text=True) == "A.\n\nB."
+
+
+# ---------------------------------------------------------------------------
+# Stitching pages: a sentence that runs across a page boundary stays one paragraph
+# ---------------------------------------------------------------------------
+
+class PagesProvider(FixedProvider):
+    """Returns the given page texts in order, one per single-page call."""
+
+    def __init__(self, pages: List[str]):
+        super().__init__()
+        self.pages = list(pages)
+
+    def transcribe_image(self, image: Image.Image, prompt: str) -> str:
+        self.single_call_count += 1
+        return self.pages.pop(0)
+
+
+def stitch(*pages: str, **config) -> str:
+    provider = PagesProvider(list(pages))
+    t = Transcriber(provider, TranscriptionConfig(batch_size=1, **config))
+    return t.transcribe_images(make_images(len(pages)))
+
+
+class TestPageJoinRule:
+    @pytest.mark.parametrize("prev, nxt, expected", [
+        # Sentence continues: join with a space
+        ("We walked to the", "river and back.", "We walked to the river and back."),
+        ("Мы шли к", "реке и обратно.", "Мы шли к реке и обратно."),
+        ("apples, pears,", "and plums.", "apples, pears, and plums."),
+        ("it was 1980", "or so.", "it was 1980 or so."),
+        ("and then —", "nothing.", "and then — nothing."),
+        # Word hyphenated across the break: join without the hyphen
+        ("a long transcrip-", "tion here.", "a long transcription here."),
+        ("перено-", "сы слов.", "переносы слов."),
+        # Page ends a sentence: keep the paragraph break
+        ("The end.", "next page.", "The end.\n\nnext page."),
+        ("Really?", "yes.", "Really?\n\nyes."),
+        ('He said "go."', "then left.", 'He said "go."\n\nthen left.'),
+        # Next page starts with a capital, list, header or symbol: keep the break
+        ("We walked to the", "River Thames.", "We walked to the\n\nRiver Thames."),
+        ("Shopping", "- milk", "Shopping\n\n- milk"),
+        ("notes", "**Header**", "notes\n\n**Header**"),
+        ("notes", "==marked== text", "notes\n\n==marked== text"),
+        # Page ends with a list item, table row, quote, bold header or highlight: keep it
+        ("- buy bread", "and milk", "- buy bread\n\nand milk"),
+        ("1. first item", "continued", "1. first item\n\ncontinued"),
+        ("| a | b |", "after", "| a | b |\n\nafter"),
+        ("> quoted line", "after", "> quoted line\n\nafter"),
+        ("**Header**", "text", "**Header**\n\ntext"),
+        ("a ==highlight==", "text", "a ==highlight==\n\ntext"),
+        # A spaced hyphen or dash is not a hyphenation
+        ("a - b -", "c", "a - b - c"),
+    ])
+    def test_join(self, prev, nxt, expected):
+        assert stitch(prev, nxt) == expected
+
+    def test_only_the_last_paragraph_and_first_paragraph_merge(self):
+        assert stitch("Para one.\n\nPara two runs", "on here.\n\nPara three.") == (
+            "Para one.\n\nPara two runs on here.\n\nPara three."
+        )
+
+    def test_three_pages_chain(self):
+        assert stitch("one", "two", "three.") == "one two three."
+
+    def test_blank_page_breaks_the_chain(self):
+        assert stitch("We walked to the", "", "river.") == "We walked to the\n\nriver."
+
+    def test_page_separator_disables_joining(self):
+        buf = io.StringIO()
+        provider = PagesProvider(["We walked to the", "river."])
+        t = Transcriber(provider, TranscriptionConfig(batch_size=1, page_separator=True))
+        t.transcribe_images(make_images(2), output=buf)
+        assert buf.getvalue() == "---- Page 1 ----\nWe walked to the\n\n---- Page 2 ----\nriver.\n"
+
+
+class TestPageJoinModes:
+    def test_stream_output_matches_string_output(self):
+        pages = ["We walked to the", "river and transcrip-", "tion.", "Done."]
+        buf = io.StringIO()
+        t = Transcriber(PagesProvider(pages), TranscriptionConfig(batch_size=1))
+        t.transcribe_images(make_images(4), output=buf)
+        assert buf.getvalue() == stitch(*pages) + "\n"
+        assert buf.getvalue() == "We walked to the river and transcription.\n\nDone.\n"
+
+    def test_join_within_a_batch(self):
+        provider = ScriptedProvider("<!-- page 1 -->\nWe walked to the\n<!-- page 2 -->\nriver.")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2)) == "We walked to the river."
+
+    def test_join_across_batches(self):
+        provider = ScriptedProvider("")
+        responses = iter([
+            "<!-- page 1 -->\nOne.\n<!-- page 2 -->\nWe walked to the",
+            "<!-- page 1 -->\nriver.\n<!-- page 2 -->\nTwo.",
+        ])
+        provider.transcribe_images_batch = lambda images, prompt: next(responses)
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(4)) == "One.\n\nWe walked to the river.\n\nTwo."
+
+    def test_plain_text_join(self):
+        provider = PagesProvider(["**Bold** start of a", "sentence."])
+        t = Transcriber(provider, TranscriptionConfig(batch_size=1))
+        assert t.transcribe_images(make_images(2), plain_text=True) == "Bold start of a sentence."
+
+
+class TestPageSeparatorStringMode:
+    """The CLI's -o path collects text as a string; separators must not be lost there."""
+
+    def test_string_mode_writes_separators_without_stitching(self):
+        provider = PagesProvider(["We walked to the", "river."])
+        t = Transcriber(provider, TranscriptionConfig(batch_size=1, page_separator=True))
+        assert t.transcribe_images(make_images(2)) == (
+            "---- Page 1 ----\nWe walked to the\n\n---- Page 2 ----\nriver."
+        )

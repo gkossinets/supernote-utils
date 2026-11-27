@@ -198,7 +198,8 @@ examples:
     transcribe_parser.add_argument(
         "--page-separator",
         action="store_true",
-        help="Insert page separator markers (---) between pages in the output. "
+        help="Start each page with a '---- Page N ----' line and keep every page break "
+             "(no joining of sentences that run across pages). "
              "Only applies to multi-page formats (.note, .pdf)"
     )
     transcribe_parser.add_argument(

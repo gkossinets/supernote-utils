@@ -1,7 +1,9 @@
 """Unified transcription engine for all input types"""
 
+import io
 import re
 import sys
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TextIO
 
@@ -15,6 +17,14 @@ from supernote_utils.providers.base import VisionProvider
 # A line holding only a page marker such as "<!-- page 2 -->". Batched requests ask the
 # model to start each page with one so that a silently dropped page can be detected.
 _PAGE_MARKER = re.compile(r"^\s*<!--\s*page\s+(\d+)\s*-->\s*$", re.IGNORECASE | re.MULTILINE)
+
+# Stitching pages: a page whose text ends mid-sentence (a letter, digit, comma, or dash)
+# continues on the next page if that one starts with a lowercase letter.
+_CONTINUES = re.compile(r"(?:[^\W_]|[,—–]|\s-)$")
+# A word hyphenated across the page break: a letter followed directly by a hyphen.
+_HYPHENATED = re.compile(r"[^\W\d_]-$")
+# Lines that end a block rather than a sentence: list items, table rows, quotes, headings.
+_BLOCK_LINE = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|\||>|#)")
 
 
 class Transcriber:
@@ -65,6 +75,9 @@ class Transcriber:
         """
         Transcribe multiple images to markdown.
 
+        Pages are joined with a blank line, except that a sentence running across a
+        page boundary is stitched back together (unless page separators are on).
+
         Args:
             images: List of PIL Images to transcribe
             output: Output stream (None for string return, sys.stdout for console)
@@ -77,86 +90,55 @@ class Transcriber:
             ImageProcessingError: If images are invalid
             ProviderAPIError: If transcription fails
         """
-        # Validate images
         ImageProcessor.validate_images(images)
 
-        # Use batch processing if batch_size > 1
-        if self.config.batch_size > 1:
-            return self._transcribe_with_batching(images, output, plain_text)
-        else:
-            return self._transcribe_single_pages(images, output, plain_text)
+        pages = self._iter_pages(images)
+        if plain_text:
+            pages = ((num, ImageProcessor.strip_markdown_formatting(text)) for num, text in pages)
+        pages = ((num, text.strip()) for num, text in pages)
 
-    def _transcribe_single_pages(
-        self,
-        images: list[Image.Image],
-        output: TextIO | None = None,
-        plain_text: bool = False,
-    ) -> str:
-        """
-        Transcribe images one at a time (original behavior).
+        if self.config.page_separator:
+            if output is not None:
+                self._write_with_separators(pages, output)
+                return ""
+            buffer = io.StringIO()
+            self._write_with_separators(pages, buffer)
+            return buffer.getvalue().rstrip("\n")
 
-        Args:
-            images: List of PIL Images to transcribe
-            output: Output stream (None for string return, sys.stdout for console)
-            plain_text: If True, strip markdown formatting from output
-
-        Returns:
-            Transcribed text (empty string if output stream provided)
-        """
-        # Prepare output
+        parts: list[str] = []
         if output is None:
-            # Return as string
-            parts = []
-            for i, image in enumerate(images, start=1):
-                text = self._transcribe_single_page(image, i)
-                if plain_text:
-                    text = ImageProcessor.strip_markdown_formatting(text)
-                parts.append(text.strip())
-            return "\n\n".join(parts)
+            write = parts.append
         else:
-            # Stream to output
-            for i, image in enumerate(images, start=1):
-                text = self._transcribe_single_page(image, i)
-                if plain_text:
-                    text = ImageProcessor.strip_markdown_formatting(text)
-
-                # Add spacing and separator
-                if i > 1:
-                    output.write("\n\n")
-                if self.config.page_separator:
-                    output.write(f"---- Page {i} ----\n")
-
-                output.write(text.strip())
+            def write(chunk: str) -> None:
+                output.write(chunk)
                 output.flush()
 
-            output.write("\n")
-            return ""
+        self._stitch_pages(pages, write)
 
-    def _transcribe_with_batching(
-        self,
-        images: list[Image.Image],
-        output: TextIO | None = None,
-        plain_text: bool = False,
-    ) -> str:
+        if output is None:
+            return "".join(parts)
+        output.write("\n")
+        return ""
+
+    def _iter_pages(self, images: list[Image.Image]) -> Iterator[tuple[int, str]]:
         """
-        Transcribe images in batches.
+        Transcribe the images, one request per page or per batch.
 
         Args:
             images: List of PIL Images to transcribe
-            output: Output stream (None for string return, sys.stdout for console)
-            plain_text: If True, strip markdown formatting from output
 
-        Returns:
-            Transcribed text (empty string if output stream provided)
+        Yields:
+            (document page number, transcribed text) in page order
         """
         batch_size = self.config.batch_size
-        all_parts = []
+        if batch_size <= 1:
+            for page_num, image in enumerate(images, start=1):
+                yield page_num, self._transcribe_single_page(image, page_num)
+            return
 
         for batch_start in range(0, len(images), batch_size):
-            batch_end = min(batch_start + batch_size, len(images))
-            batch_images = images[batch_start:batch_end]
-            batch_page_nums = list(range(batch_start + 1, batch_end + 1))
-
+            batch_images = images[batch_start:batch_start + batch_size]
+            batch_page_nums = list(range(batch_start + 1, batch_start + len(batch_images) + 1))
             try:
                 page_texts = self._transcribe_batch(batch_images, batch_page_nums)
             except Exception as e:
@@ -166,30 +148,75 @@ class Transcriber:
                 )
                 print("Falling back to single-page mode for this batch...", file=sys.stderr)
                 page_texts = self._transcribe_batch_fallback(batch_images, batch_page_nums)
+            yield from zip(batch_page_nums, page_texts)
 
-            for page_num, text in zip(batch_page_nums, page_texts):
-                if plain_text:
-                    text = ImageProcessor.strip_markdown_formatting(text)
-                text = text.strip()
+    @staticmethod
+    def _write_with_separators(pages: Iterator[tuple[int, str]], output: TextIO) -> None:
+        """
+        Write each page under its own separator line, without stitching.
 
-                if output is None:
-                    # A blank page adds nothing, not an empty paragraph.
-                    if text:
-                        all_parts.append(text)
-                    continue
+        Args:
+            pages: (page number, text) pairs
+            output: Output stream
+        """
+        for page_num, text in pages:
+            if page_num > 1:
+                output.write("\n\n")
+            output.write(f"---- Page {page_num} ----\n{text}")
+            output.flush()
+        output.write("\n")
 
-                if page_num > 1:
-                    output.write("\n\n")
-                if self.config.page_separator:
-                    output.write(f"---- Page {page_num} ----\n")
-                output.write(text)
-                output.flush()
+    @classmethod
+    def _stitch_pages(cls, pages: Iterator[tuple[int, str]], write: Callable[[str], None]) -> None:
+        """
+        Pass page texts to `write`, joined by a blank line or stitched where a sentence continues.
 
-        if output is None:
-            return "\n\n".join(all_parts)
-        else:
-            output.write("\n")
-            return ""
+        Each page is held back until the next arrives, because how it ends on the
+        output depends on how the next page starts.
+
+        Args:
+            pages: (page number, text) pairs; blank pages are skipped but end a sentence
+            write: Called with each chunk of output text, in order
+        """
+        pending: str | None = None
+        blank_since_pending = False
+        for _, text in pages:
+            if not text:
+                blank_since_pending = pending is not None
+                continue
+            if pending is not None:
+                if blank_since_pending:
+                    write(pending + "\n\n")
+                else:
+                    head, joint = cls._page_joint(pending, text)
+                    write(head + joint)
+            pending = text
+            blank_since_pending = False
+        if pending is not None:
+            write(pending)
+
+    @staticmethod
+    def _page_joint(prev: str, nxt: str) -> tuple[str, str]:
+        """
+        Decide how one page's text joins the next.
+
+        Args:
+            prev: Text of the earlier page (stripped)
+            nxt: Text of the following page (stripped)
+
+        Returns:
+            (prev, possibly without a trailing hyphen, and the text to put between them):
+            "" for a word hyphenated across the break, " " for a sentence that
+            continues, or a blank line otherwise
+        """
+        last_line = prev.rsplit("\n", 1)[-1]
+        if not nxt[:1].islower() or _BLOCK_LINE.match(last_line):
+            return prev, "\n\n"
+        if _HYPHENATED.search(prev):
+            return prev[:-1], ""
+        if _CONTINUES.search(prev):
+            return prev, " "
+        return prev, "\n\n"
 
     def _transcribe_batch(self, batch_images: list[Image.Image], page_nums: list[int]) -> list[str]:
         """

@@ -58,6 +58,8 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 
 **Page check for batches (2026-11-27):** the batch prompt asks the model to start each page with `<!-- page N -->` (position within the request). Pages without a marker are transcribed again on their own; a response with no markers at all is redone page by page, since there's no way to tell what is missing (no tested model ignored the markers). Text before the first marker, or after an out-of-range marker, is kept and reported. Because page boundaries are known, `--page-separator` now labels every page in batch mode too.
 
+**Stitching pages (2026-11-27):** each page is a separate segment now, so a sentence crossing a page boundary would be split into two paragraphs (this already happened at batch boundaries and in single-page mode). After transcription, pages are joined with a space when the earlier page ends with a letter, digit, comma or dash, its last line isn't a list item, table row, quote or heading, and the next page starts with a lowercase letter; a letter followed by a hyphen is rejoined without it. Done in code rather than the prompt, so it behaves the same in every mode. `--page-separator` turns it off. The same change fixed `--page-separator` being ignored with `-o` (that path collects text as a string, which never wrote separators).
+
 ---
 
 ## Model Quality Findings
@@ -143,7 +145,6 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 ## Future Direction
 
 ### Open questions (2026-11-27, updated after the second session)
-- **Page joins.** Since the page check, each page is transcribed as its own segment, and pages are joined with a blank line. A sentence that runs across a page boundary is split into two paragraphs. This already happened at batch boundaries and in single-page mode. Candidate fix: join with a space when a page ends without closing punctuation and the next starts lowercase (and drop a trailing hyphen), except with `--page-separator`. Not decided.
 - **Thinking level for Gemini.** Low thinking made Gemini Flash about 6x faster with nearly the same accuracy (see the thinking table). Decide whether to send `thinking_level="low"` by default for Gemini, maybe behind a flag; recheck Flash latency at default thinking at another time of day first.
 - **Memory guidance.** `ollama ps` on the M1 Max shows gemma4:26b-a4b at 16–17 GB and qwen3.5:9b at about 8 GB once loaded, which fits the README's "32 GB / 16 GB" with room for the OS. Still unchecked on smaller machines.
 - **A `.note` fixture without handwriting.** Needs a note drawn on the device (shapes or doodles only). The missing-file test now runs without it.
