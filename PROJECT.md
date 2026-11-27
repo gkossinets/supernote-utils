@@ -116,6 +116,16 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 
 ## Future Direction
 
+### Open questions (2026-11-27)
+- **Page check for batched requests.** Cloud providers still send up to 5 pages per request, and nothing verifies that every page comes back (small Ollama models dropped pages silently). Idea: ask the model to start each page with a marker such as `<!-- page 2 -->`, count the markers, and redo only the missing pages one at a time (the existing batch fallback already transcribes pages singly). This would also protect Ollama users who set `--batch-size`.
+- **Claude and OpenAI page drops.** Only Gemini was checked (8 two-page requests, no drops). Run the same check, and the benchmark, on `claude`, `claude-opus`, `gpt` and `gpt-mini`.
+- **Thinking on cloud models.** Ollama requests turn thinking off; cloud requests use each provider's default. Measure low versus default thinking effort per provider on the benchmark (accuracy, tokens, time) before changing anything. Claude and OpenAI offer lower effort rather than an off switch, and some Gemini models can't fully disable thinking; check current docs first.
+- **Gemini Flash latency.** On the benchmark, Flash (the default) took 27–84 s per two-page request, while `gemini-pro` took 9–12 s and was slightly more accurate. Recheck at other times of day; if it holds, weigh switching the default against free-tier limits and price.
+- **Warn when a model thinks anyway.** qwen3-vl:8b ignores `think=False` and returns 17–21K characters of reasoning per request. The Ollama provider could warn when a response contains thinking despite the setting.
+- **`think=False` on models without thinking.** All tested models support thinking. Confirm Ollama accepts the setting for a model that doesn't (e.g. qwen2.5-vl:7b).
+- **Memory guidance.** The README's "32 GB for gemma4:26b-a4b, 16 GB for qwen3.5:9b" is an estimate from download sizes, not a measurement. Check on smaller machines.
+- **A `.note` fixture without handwriting.** With no `.note` in the repo, the `.note` parsing tests skip on fresh clones. A note containing only shapes or doodles would let them run. Also, `test_sources.py`'s missing-file test doesn't need the fixture but is skipped with the tests that do.
+
 ### Public handwriting benchmark (to check)
 The repo ships no handwriting, so nobody can rerun the benchmarks as they are. To make them reproducible, look for public-domain (or openly licensed) handwritten Russian and English pages with known transcriptions, e.g. scanned letters or manuscripts in archives, or handwriting datasets with permissive licenses. They should be similar to Supernote pages: lined, one writer per page, everyday script, and contain enough Cyrillic (all 33 letters, look-alike runs such as и/ш/т/л/м) to separate models. The texts in `misc/benchmark/` show what such pages should cover.
 
