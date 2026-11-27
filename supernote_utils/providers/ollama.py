@@ -17,19 +17,9 @@ except ImportError:
 class OllamaProvider(VisionProvider):
     """Provider for Ollama local vision models"""
 
-    # Known vision-capable model keywords (in priority order)
-    VISION_KEYWORDS = [
-        "qwen2.5-vl:7b",  # Preferred default
-        "qwen2.5-vl",
-        "qwen",
-        "llama3.2-vision",
-        "llava",
-        "minicpm",
-        "gemma3",
-        "vision",
-        "ocr",
-        "nanonets",
-    ]
+    # Auto-detection picks the first of these that is installed, else the first
+    # installed model that reports the vision capability.
+    PREFERRED_MODELS = ["qwen2.5-vl:7b"]
 
     def __init__(
         self,
@@ -116,27 +106,16 @@ class OllamaProvider(VisionProvider):
         return f"Ollama ({self.actual_model})"
 
     def _detect_vision_model(self) -> str | None:
-        """Detect first available vision model from Ollama"""
-        try:
-            models = ollama.list()
-            model_list = models.get("models", [])
+        """Pick a vision model: a preferred one if installed, else the first available.
 
-            # First pass: check for preferred default
-            for model in model_list:
-                name = getattr(model, "model", model.get("model", ""))
-                if "qwen2.5-vl:7b" in name.lower():
-                    return name
-
-            # Second pass: check other vision keywords
-            for model in model_list:
-                name = getattr(model, "model", model.get("model", ""))
-                if any(keyword in name.lower() for keyword in self.VISION_KEYWORDS[1:]):
-                    return name
-
-        except Exception as e:
-            print(f"Warning: Could not auto-detect Ollama models: {e}", file=sys.stderr)
-
-        return None
+        Returns:
+            Model name, or None if no installed model can read images.
+        """
+        vision_models = self.list_available_models()
+        for preferred in self.PREFERRED_MODELS:
+            if preferred in vision_models:
+                return preferred
+        return vision_models[0] if vision_models else None
 
     @staticmethod
     def _image_to_bytes(image: Image.Image) -> bytes:
@@ -150,39 +129,34 @@ class OllamaProvider(VisionProvider):
 
     @classmethod
     def list_available_models(cls, api_key: str | None = None) -> list[str]:
-        """
-        List all available vision models in Ollama.
+        """List installed models that Ollama reports as able to read images.
+
+        Uses each model's reported capabilities rather than its name, so new model
+        families are found without a code change.
 
         Args:
             api_key: Not used for Ollama (local models)
 
         Returns:
-            List of model names
+            Model names in the order Ollama lists them (most recently changed first);
+            empty if Ollama is not installed or not running.
         """
         if ollama is None:
             return []
 
-        vision_models = []
         try:
-            models = ollama.list()
-            model_list = models.get("models", [])
+            names = [model.model for model in ollama.list().models]
+        except Exception as e:
+            print(f"Warning: could not reach Ollama: {e}", file=sys.stderr)
+            return []
 
-            for model in model_list:
-                name = getattr(model, "model", model.get("model", ""))
-                if any(keyword in name.lower() for keyword in cls.VISION_KEYWORDS):
-                    vision_models.append(name)
-
-        except Exception:
-            pass
-
+        vision_models = []
+        for name in names:
+            try:
+                capabilities = ollama.show(name).capabilities or []
+            except Exception as e:
+                print(f"Warning: could not inspect Ollama model {name}: {e}", file=sys.stderr)
+                continue
+            if "vision" in capabilities:
+                vision_models.append(name)
         return vision_models
-
-    @classmethod
-    def detect_available_models(cls) -> list:
-        """
-        Deprecated: Use list_available_models() instead.
-
-        Returns:
-            List of model names
-        """
-        return cls.list_available_models()

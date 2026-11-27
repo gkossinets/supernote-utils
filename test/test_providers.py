@@ -471,3 +471,57 @@ class TestOllamaProvider:
         fake_ollama.chat.side_effect = RuntimeError("boom")
         with pytest.raises(ProviderAPIError, match="boom"):
             OllamaProvider(model="m").transcribe_image(_image(), "PROMPT")
+
+
+def _installed(fake_ollama, models: dict[str, list[str]]) -> None:
+    """Make the fake server report these models (in this order) with these capabilities."""
+    fake_ollama.list.return_value = SimpleNamespace(
+        models=[SimpleNamespace(model=name) for name in models]
+    )
+    fake_ollama.show.side_effect = lambda name: SimpleNamespace(capabilities=models[name])
+
+
+class TestOllamaModelDetection:
+    VISION = ["completion", "vision", "thinking"]
+    TEXT = ["completion", "thinking"]
+
+    def test_lists_models_by_vision_capability_not_name(self, fake_ollama):
+        # gemma4 and muse-glimmer match no name keyword; qwen3:8b matches "qwen" but is text-only.
+        _installed(fake_ollama, {
+            "qwen3:8b": self.TEXT,
+            "gemma4:latest": self.VISION,
+            "muse-glimmer:30b-mlx": self.VISION,
+        })
+        assert OllamaProvider.list_available_models() == ["gemma4:latest", "muse-glimmer:30b-mlx"]
+
+    def test_auto_detect_never_picks_text_only_model(self, fake_ollama):
+        _installed(fake_ollama, {"qwen3:8b": self.TEXT, "gemma4:latest": self.VISION})
+        assert OllamaProvider().actual_model == "gemma4:latest"
+
+    def test_auto_detect_prefers_listed_default(self, fake_ollama, monkeypatch):
+        monkeypatch.setattr(OllamaProvider, "PREFERRED_MODELS", ["b:1", "c:1"])
+        _installed(fake_ollama, {"a:1": self.VISION, "c:1": self.VISION, "b:1": self.VISION})
+        assert OllamaProvider().actual_model == "b:1"
+
+    def test_auto_detect_without_vision_models_raises(self, fake_ollama):
+        _installed(fake_ollama, {"qwen3:8b": self.TEXT})
+        with pytest.raises(ProviderNotAvailableError, match="No vision models"):
+            OllamaProvider()
+
+    def test_model_that_cannot_be_inspected_is_skipped(self, fake_ollama, capsys):
+        _installed(fake_ollama, {"broken:1": self.VISION, "gemma4:latest": self.VISION})
+        working_show = fake_ollama.show.side_effect
+
+        def show(name):
+            if name == "broken:1":
+                raise RuntimeError("bad manifest")
+            return working_show(name)
+
+        fake_ollama.show.side_effect = show
+        assert OllamaProvider.list_available_models() == ["gemma4:latest"]
+        assert "broken:1" in capsys.readouterr().err
+
+    def test_unreachable_server_warns_and_lists_nothing(self, fake_ollama, capsys):
+        fake_ollama.list.side_effect = ConnectionError("connection refused")
+        assert OllamaProvider.list_available_models() == []
+        assert "could not reach Ollama" in capsys.readouterr().err
