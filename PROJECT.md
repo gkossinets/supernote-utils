@@ -52,9 +52,11 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 
 **Date headers (2026-10-29):** In a real journal corpus (~250 daily pages, Gemini Flash), about 11% of transcribed date headers had a wrong year, and in several the day or weekday had been shifted to agree with the misread year. The prompt's "Logic is Law" rule invited that reconciliation. Three changes: (1) a strict rule in the prompt to transcribe dates, times, and numbers digit by digit and never reconcile a date with its weekday, with "Logic is Law" limited to words; (2) `--date-hint` (default `auto`) passes the date from the input filename to the model as a hint, explicitly subordinate to clear handwriting; (3) after transcription, `core/dates.py` compares the first date in the output with the expected date and checks the weekday, printing warnings to stderr. The text is never corrected automatically, because late-night entries can legitimately carry the next day's date.
 
-**Ollama (2026-11-27):** requests are sent with `think=False`. Current local vision models (Gemma 4, Qwen 3.x) think by default; on the test note, thinking made them 5–12x slower with no gain in accuracy (gemma4:31b: 563 s → 47 s for two pages). Auto-detection (`-m ollama`, `list-models`) uses each model's reported `vision` capability instead of matching names, and prefers `gemma4:26b-a4b` (speed), then `gemma4:26b`, `gemma4:31b-mlx` (best Cyrillic accuracy, ~3x slower), `qwen3.5:9b` (best small model), `gemma4:e4b-it-q8_0`, `gemma4:latest`, else the first vision model. Ollama sends one page per request unless `--batch-size` is given (`DEFAULT_BATCH_SIZE` on the provider class; cloud providers keep 5): gemma4:latest and qwen3.5:9b each silently dropped a whole page in 2 of 4 two-page requests, while single-page requests lost nothing and were no slower for the larger models. The `ollama` client floor is 0.5.0, the first release with `think`.
+**Ollama (2026-11-27):** requests are sent with `think=False`. Current local vision models (Gemma 4, Qwen 3.x) think by default; on the test note, thinking made them 5–12x slower with no gain in accuracy (gemma4:31b: 563 s → 47 s for two pages). Auto-detection (`-m ollama`, `list-models`) uses each model's reported `vision` capability instead of matching names, and prefers `gemma4:26b-a4b` (speed), then `gemma4:26b`, `gemma4:31b-mlx` (best Cyrillic accuracy, ~3x slower), `qwen3.5:9b` (best small model), `gemma4:e4b-it-q8_0`, `gemma4:latest`, else the first vision model. Ollama sends one page per request unless `--batch-size` is given (`DEFAULT_BATCH_SIZE` on the provider class; cloud providers keep 5): gemma4:latest and qwen3.5:9b each silently dropped a whole page in 2 of 4 two-page requests, while single-page requests lost nothing and were no slower for the larger models. The `ollama` client floor is 0.5.0, the first release with `think`. If a model reasons anyway (qwen3-vl:8b), the provider prints one warning.
 
 **Batch processing default: 5 pages** — batching images into a single API call is faster and cheaper than per-page calls. Providers that support multi-image input handle this natively; others fall back to serial calls.
+
+**Page check for batches (2026-11-27):** the batch prompt asks the model to start each page with `<!-- page N -->` (position within the request). Pages without a marker are transcribed again on their own; a response with no markers at all is redone page by page, since there's no way to tell what is missing (no tested model ignored the markers). Text before the first marker, or after an out-of-range marker, is kept and reported. Because page boundaries are known, `--page-separator` now labels every page in batch mode too.
 
 ---
 
@@ -110,24 +112,51 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 - **gemma4:31b-mlx vs the older gemma4:31b build** (two-page requests): 3.7–3.9% vs 5.5–6.8% Russian CER, 30 s vs 72 s.
 - **Still no measurable effect** on gemma4:26b-a4b from temperature 0.5 vs 1.0 or from the Russian prompt paragraph; the paragraph also did nothing for e4b.
 - **Dropped pages:** see the Ollama decision above. gemma4:26b-a4b and both 31b builds never dropped a page in 24 two-page requests.
-- **Cloud models, two-page requests:** Gemini 3.8 Flash and gemini-4-hydrogen (`gemini-pro`) never dropped a page in 4 runs each, with near-perfect output (Flash 0.2–0.4% CER, Pro 0.1%; inflated somewhat by the parallel pages). So cloud providers keep 5 pages per request. Claude and OpenAI were not tested.
+- **Cloud models, two-page requests:** Gemini 3.8 Flash and gemini-4-hydrogen (`gemini-pro`) never dropped a page in 4 runs each, with near-perfect output (Flash 0.2–0.4% CER, Pro 0.1%; inflated somewhat by the parallel pages). So cloud providers keep 5 pages per request. Claude and OpenAI were checked later and didn't drop pages either (see below).
+
+2026-11-27 (second session), cloud models on the `misc/benchmark/` pages, temperature at each provider's default, 4 runs each. One page per request; CER after stripping Markdown; time per page:
+
+| Model | Thinking | Time per page (median) | CER, Russian | CER, English | Output tokens per page (median) |
+|---|---|---|---|---|---|
+| `gemini-pro` (gemini-4-hydrogen) | default | 8.1 s | 0.1% | 0.1–0.3% | 1560 |
+| `gemini-pro` | low | 4.9 s | 0.0–0.3% | 0.1% | 769 |
+| `gemini-flash` (gemini-3.8-flash) | default | 26 s (11–143 s) | 0.4–0.8% | 0.2–0.5% | 3353 |
+| `gemini-flash` | low | 4.0 s | 0.5–1.2% | 0.1% | 252 |
+| `claude-opus` (Opus 5.5) | default (`medium`) | 7.5 s | 0.3–0.8% | 0.0% | 832 |
+| `claude-opus` | `low` | 3.3 s | 1.2–1.9% | 0.0% | 370 |
+| `gpt` (gpt-6.2-sol) | default | 5.5 s | 0.4–0.9% | 0.0–0.1% | 276 |
+| `gpt` | `low` | 4.5 s | 0.5–0.9% | 0.0–0.1% | 253 |
+| `claude` (Sonnet 5.5) | default (`high`) | 3.3 s | 2.0–2.5% | 0.0–0.1% | 369 |
+| `claude` | `low` | 3.2 s | 2.0–2.5% | 0.0–0.1% | 369 |
+| `gpt-mini` (gpt-6-luna) | default | 14.3 s | 8.5–9.2% | 0.7–1.9% | 1804 |
+| `gpt-mini` | `low` | 7.2 s | 8.6–12.3% | 0.6–1.2% | 920 |
+
+- **Thinking settings used:** Gemini `thinking_config.thinking_level="low"`; Claude `output_config.effort="low"`; OpenAI `reasoning.effort="low"`. The defaults in the code are unchanged.
+- **Gemini Flash latency holds:** at default thinking it spent ~3300 output tokens per page (mostly thinking) and took 11–143 s per page. Low thinking cut that to ~250 tokens and 4 s with a small Russian cost. `gemini-pro` was the most accurate model overall at either setting.
+- **Claude:** Sonnet produced identical output at `low` and default, apparently not thinking on this task either way. Opus at `low` halved time and tokens but doubled Russian errors; keep its default.
+- **OpenAI:** `gpt` barely changes at `low`; `gpt-mini` gets faster but no better.
+- **Page drops with page markers (two-page requests, 4 each):** `claude`, `claude-opus`, `gpt`, `gpt-mini` returned both markers and both pages every time, as did gemma4:26b-a4b, gemma4:latest and gemma4:e4b-it-q8_0 via Ollama. qwen3.5:9b dropped the English page once in 4, with no error and only one marker; the page check catches exactly this. No model ignored the markers.
+- **Ollama `think=False`** is accepted by qwen2.5vl:7b, which has no thinking capability (no error). qwen3-vl:8b still thinks regardless (20,163 characters on one page); the provider now warns about it.
 
 ---
 
 ## Future Direction
 
-### Open questions (2026-11-27)
-- **Page check for batched requests.** Cloud providers still send up to 5 pages per request, and nothing verifies that every page comes back (small Ollama models dropped pages silently). Idea: ask the model to start each page with a marker such as `<!-- page 2 -->`, count the markers, and redo only the missing pages one at a time (the existing batch fallback already transcribes pages singly). This would also protect Ollama users who set `--batch-size`.
-- **Claude and OpenAI page drops.** Only Gemini was checked (8 two-page requests, no drops). Run the same check, and the benchmark, on `claude`, `claude-opus`, `gpt` and `gpt-mini`.
-- **Thinking on cloud models.** Ollama requests turn thinking off; cloud requests use each provider's default. Measure low versus default thinking effort per provider on the benchmark (accuracy, tokens, time) before changing anything. Claude and OpenAI offer lower effort rather than an off switch, and some Gemini models can't fully disable thinking; check current docs first.
-- **Gemini Flash latency.** On the benchmark, Flash (the default) took 27–84 s per two-page request, while `gemini-pro` took 9–12 s and was slightly more accurate. Recheck at other times of day; if it holds, weigh switching the default against free-tier limits and price.
-- **Warn when a model thinks anyway.** qwen3-vl:8b ignores `think=False` and returns 17–21K characters of reasoning per request. The Ollama provider could warn when a response contains thinking despite the setting.
-- **`think=False` on models without thinking.** All tested models support thinking. Confirm Ollama accepts the setting for a model that doesn't (e.g. qwen2.5-vl:7b).
-- **Memory guidance.** The README's "32 GB for gemma4:26b-a4b, 16 GB for qwen3.5:9b" is an estimate from download sizes, not a measurement. Check on smaller machines.
-- **A `.note` fixture without handwriting.** With no `.note` in the repo, the `.note` parsing tests skip on fresh clones. A note containing only shapes or doodles would let them run. Also, `test_sources.py`'s missing-file test doesn't need the fixture but is skipped with the tests that do.
+### Open questions (2026-11-27, updated after the second session)
+- **Page joins.** Since the page check, each page is transcribed as its own segment, and pages are joined with a blank line. A sentence that runs across a page boundary is split into two paragraphs. This already happened at batch boundaries and in single-page mode. Candidate fix: join with a space when a page ends without closing punctuation and the next starts lowercase (and drop a trailing hyphen), except with `--page-separator`. Not decided.
+- **Thinking level for Gemini.** Low thinking made Gemini Flash about 6x faster with nearly the same accuracy (see the thinking table). Decide whether to send `thinking_level="low"` by default for Gemini, maybe behind a flag; recheck Flash latency at default thinking at another time of day first.
+- **Memory guidance.** `ollama ps` on the M1 Max shows gemma4:26b-a4b at 16–17 GB and qwen3.5:9b at about 8 GB once loaded, which fits the README's "32 GB / 16 GB" with room for the OS. Still unchecked on smaller machines.
+- **A `.note` fixture without handwriting.** Needs a note drawn on the device (shapes or doodles only). The missing-file test now runs without it.
 
-### Public handwriting benchmark (to check)
+### Public handwriting benchmark
 The repo ships no handwriting, so nobody can rerun the benchmarks as they are. To make them reproducible, look for public-domain (or openly licensed) handwritten Russian and English pages with known transcriptions, e.g. scanned letters or manuscripts in archives, or handwriting datasets with permissive licenses. They should be similar to Supernote pages: lined, one writer per page, everyday script, and contain enough Cyrillic (all 33 letters, look-alike runs such as и/ш/т/л/м) to separate models. The texts in `misc/benchmark/` show what such pages should cover.
+
+Candidates found (2026-11-27; licences checked on the source pages unless noted). Ship a fetch script pinned to a dataset revision rather than committing page images.
+- **Russian: ai-forever/school_notebooks_RU** (Hugging Face, MIT). Full-page phone photos of modern school notebooks, lined or squared; word-level ground truth with polygons and line groups, so page text has to be rebuilt from geometry. Teacher comments are labelled separately and can be excluded. Best fit.
+- **Russian: AntiplagiatCompany/HWR200** (Apache-2.0). 200 writers, scanned and photographed; ground truth is the copied source text per document, not per page, and writers' slips aren't recorded.
+- **English: GNHK** (GoodNotes, CC-BY-4.0). Modern full pages photographed, often lined; word-level ground truth. Size (~687 images) unverified.
+- **English: ai-forever/school_notebooks_EN** (MIT). 90 pages, same format as the Russian set, which helps comparisons.
+- Ruled out: HKR (CC-BY-NC-ND), IAM (non-commercial, registration), CVL (NC), Digital Peter and the Tsiolkovsky papers (18th century or pre-1918 spelling), Bentham (18th century).
 
 ### Near-term CLI improvements
 - Resume/checkpoint support for large documents (partial transcription on failure)
