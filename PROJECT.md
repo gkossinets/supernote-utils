@@ -4,7 +4,7 @@ Plans, architecture decisions, progress, and next steps.
 
 ---
 
-## Current State (v0.3.0)
+## Current State (v0.4.0)
 
 The CLI is feature-complete for the core use case: transcribing handwritten notes from Supernote tablets (and other image sources) to Markdown using LLM vision APIs.
 
@@ -26,8 +26,9 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - PDF text extraction falls back to image rendering when no embedded images exist
 - Handwritten date headers: models misread year digits (2026 as 2020/2024) and may then shift the day or weekday to make the wrong date consistent. Mitigated by the date rule, the filename date hint, and the header check (below); not eliminated
 
-### Repository and release (2026-11-26)
-- **v0.3.0 released**: the first GitHub release, an annotated tag `v0.3.0`. Install with `pip install "git+https://github.com/gkossinets/supernote-utils.git@v0.3.0"`. Later docs-only commits on `main` aren't in the tag.
+### Repository and releases
+- **v0.4.0 released (2026-11-27)**: annotated tag `v0.4.0` with a GitHub release; local-model (Ollama) improvements, the page check and page stitching, low thinking for Gemini. Install with `pip install "git+https://github.com/gkossinets/supernote-utils.git@v0.4.0"`.
+- **v0.3.0 (2026-11-26)**: the first GitHub release (dependency and model refresh).
 - **No CI.** GitHub Actions is turned off in the repo settings, and `.github/` is gone: the Gemini CLI workflow templates were removed first, then the short-lived `ci.yml`. Before committing, run `pytest` and `ruff check supernote_utils/` locally; all tests are offline.
 - **No secrets or variables** remain in the repo settings. `GEMINI_API_KEY` and `GOOGLE_GENAI_USE_GCA` were deleted with the Gemini workflows that used them.
 - **Only `main`** exists on GitHub. The four merged `claude/...` branches (PRs #5, #7, #9, #10) were deleted. Their history is in `main` and the merged PRs.
