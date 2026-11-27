@@ -110,6 +110,7 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 - **gemma4:31b-mlx vs the older gemma4:31b build** (two-page requests): 3.7–3.9% vs 5.5–6.8% Russian CER, 30 s vs 72 s.
 - **Still no measurable effect** on gemma4:26b-a4b from temperature 0.5 vs 1.0 or from the Russian prompt paragraph; the paragraph also did nothing for e4b.
 - **Dropped pages:** see the Ollama decision above. gemma4:26b-a4b and both 31b builds never dropped a page in 24 two-page requests.
+- **Cloud models, two-page requests:** Gemini 3.8 Flash and gemini-4-hydrogen (`gemini-pro`) never dropped a page in 4 runs each, with near-perfect output (Flash 0.2–0.4% CER, Pro 0.1%; inflated somewhat by the parallel pages). So cloud providers keep 5 pages per request. Claude and OpenAI were not tested.
 
 ---
 
