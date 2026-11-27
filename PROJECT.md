@@ -119,7 +119,7 @@ The Python CLI (`supernote-utils`) would remain as the reference implementation 
 
 `misc/test-transcribed.md` — manually verified reference transcription of `test/test.note`, used by `misc/calibrate.py`.
 
-`misc/benchmark/handwriting-ru.md`, `handwriting-en.md` — reference texts for a 2-page benchmark note (one Russian page, one English page) that covers every letter of both alphabets, look-alike letter runs, unusual names, numbers, and context-free word lists. The texts match the handwritten pages exactly, including the writer's slips ("neigbor", "щетку" without ё). The handwritten `.note` itself is kept local and gitignored, like all handwriting samples.
+`misc/benchmark/handwriting-ru.md`, `handwriting-en.md` — reference texts for a 2-page benchmark note (one Russian page, one English page) that covers every letter of both alphabets, look-alike letter runs, unusual names, numbers, and context-free word lists. These are the clean texts to copy; anyone can write them out and score models on their own handwriting (README, "Benchmark on your own handwriting"). Scoring needs a reference matching each page exactly, slips included, so the author's page-matched copies live in the gitignored `misc/benchmark/local/`, next to the handwritten `.note`, which is also kept local.
 
 `misc/results/` — timestamped comparison reports written by `misc/calibrate.py` (`run_TIMESTAMP.md`).
 

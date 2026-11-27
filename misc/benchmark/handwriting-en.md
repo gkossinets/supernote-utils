@@ -1,6 +1,6 @@
 **March 12, Tuesday**
 
-Wet snow fell all morning, and I put off leaving the house for far too long. The stairwell smelled of cabbage soup and fresh paint. My neigbor, Siobhan Quigley, complained that her cat Zbigniew had once again chewed the fern on the windowsill.
+Wet snow fell all morning, and I put off leaving the house for far too long. The stairwell smelled of cabbage soup and fresh paint. My neighbor, Siobhan Quigley, complained that her cat Zbigniew had once again chewed the fern on the windowsill.
 
 At work we argued about the budget: we need to cut spending by 15%, but nobody wants to give up the trip to Reykjavik. Jody suggested moving the meeting to Thursday the 14th at 9:30, and everyone agreed.
 

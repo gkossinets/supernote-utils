@@ -194,6 +194,21 @@ Metrics calculated:
 
 Results are saved to `misc/results/run_TIMESTAMP.md`
 
+### Benchmark on your own handwriting
+
+`misc/benchmark/` holds two texts to copy by hand, one Russian (`handwriting-ru.md`) and one English (`handwriting-en.md`). Each uses every letter of its alphabet, plus letter shapes that are easy to confuse in handwriting, unusual names, numbers, and lists of unrelated words that a model can't guess from context.
+
+1. Write each text in its own note on your tablet and copy the `.note` files to your computer.
+2. If your page differs from the text (a skipped word, a slip, ё written as е), edit a copy of the reference to match the page. The model is scored against what is written, not against what was meant.
+3. Run the calibration script on each note:
+
+```bash
+python misc/calibrate.py --input ru.note --reference misc/benchmark/handwriting-ru.md
+python misc/calibrate.py --input en.note --reference misc/benchmark/handwriting-en.md
+```
+
+`.note` files are gitignored, so your handwriting stays out of the repository.
+
 ## Supported Models
 
 Run `supernote list-models` to see what's available in your environment (it prints the same shortcut table as below). Use either shortcuts or explicit `provider:model` format:
