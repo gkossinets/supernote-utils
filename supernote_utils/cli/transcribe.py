@@ -11,6 +11,7 @@ from supernote_utils.config import ProviderConfig, TranscriptionConfig
 from supernote_utils.core.dates import check_header_date, date_from_filename
 from supernote_utils.core.transcriber import Transcriber
 from supernote_utils.providers import create_provider
+from supernote_utils.providers.base import VisionProvider
 from supernote_utils.sources import factory
 from supernote_utils.sources.note import NoteFileHandler
 
@@ -34,10 +35,15 @@ def _build_provider(args):
 
 
 def _build_transcription_config(
-    args, is_multipage: bool, expected_date: date | None = None
+    args, is_multipage: bool, expected_date: date | None = None, provider=None
 ) -> TranscriptionConfig:
-    """Create a TranscriptionConfig from CLI args."""
-    batch_size = args.batch_size if hasattr(args, 'batch_size') else 5
+    """Create a TranscriptionConfig from CLI args.
+
+    Without --batch-size, the provider's DEFAULT_BATCH_SIZE applies.
+    """
+    batch_size = getattr(args, 'batch_size', None)
+    if batch_size is None:
+        batch_size = provider.DEFAULT_BATCH_SIZE if provider else VisionProvider.DEFAULT_BATCH_SIZE
     if not is_multipage and batch_size > 1:
         batch_size = 1
     return TranscriptionConfig(
@@ -156,7 +162,7 @@ def _transcribe_combined(
             _warn_format_specific(args, input_path)
             is_multipage = factory.is_multipage_format(input_path)
             expected_date = _expected_date_for(args, input_path)
-            transcription_config = _build_transcription_config(args, is_multipage, expected_date)
+            transcription_config = _build_transcription_config(args, is_multipage, expected_date, provider)
             extract_kwargs = _get_extract_kwargs(args, input_path)
             images = factory.extract_images(input_path, **extract_kwargs)
             transcriber = Transcriber(provider, transcription_config)
@@ -213,7 +219,7 @@ def _transcribe_per_file(
                 _warn_format_specific(args, input_path)
                 is_multipage = factory.is_multipage_format(input_path)
                 expected_date = _expected_date_for(args, input_path)
-                transcription_config = _build_transcription_config(args, is_multipage, expected_date)
+                transcription_config = _build_transcription_config(args, is_multipage, expected_date, provider)
                 extract_kwargs = _get_extract_kwargs(args, input_path)
                 images = factory.extract_images(input_path, **extract_kwargs)
                 transcriber = Transcriber(provider, transcription_config)

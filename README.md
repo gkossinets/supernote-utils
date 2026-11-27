@@ -132,7 +132,7 @@ supernote transcribe input.note -o output.md --pdf output.pdf
 # Multiple files → individual outputs in a directory
 supernote transcribe -t markdown *.note -d transcribed/
 
-# Adjust batch size for multi-page processing (default: 5)
+# Adjust batch size for multi-page processing (default: 5; 1 for Ollama)
 supernote transcribe input.pdf --batch-size 10 -o output.md
 
 # Disable batch processing (process one page at a time)
@@ -142,7 +142,7 @@ supernote transcribe input.note --batch-size 1 --page-separator -o output.md
 supernote transcribe scan.pdf --date-hint 2026-09-20 -o output.md
 ```
 
-**Batch Processing:** By default, multi-page documents (.note, .pdf) are processed in batches of 5 pages in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1.
+**Batch Processing:** By default, multi-page documents (.note, .pdf) are processed in batches of 5 pages in a single API call. This is faster and more cost-effective than processing pages individually. The batch size can be adjusted with `--batch-size`, or disabled entirely by setting it to 1. Ollama models get one page per request unless you set `--batch-size`: small local models sometimes drop a whole page from a multi-page request without any error, and local requests cost nothing.
 
 **Date headers:** Vision models often misread the year in a handwritten date header (e.g. "2026" as "2020" or "2024"), and may then shift the day or weekday so the wrong date looks consistent. The prompt tells the model to transcribe dates digit by digit and never reconcile a date with its weekday. When an input filename contains a date (`Pages 20260920.note`, `scan 2026-09-20.pdf`), it is also given to the model as a hint, and after transcription the first date in the output is checked against it. Mismatches, and weekdays that don't fit their date, are printed as warnings on stderr; the transcription itself is never changed, since a late-night entry may genuinely be headed with the next day. Use `--date-hint YYYY-MM-DD` to set the date for every input, or `--date-hint off` to disable both the hint and the check.
 
@@ -232,7 +232,7 @@ Run `supernote list-models` to see what's available in your environment (it prin
 
 **Note:** Only locally installed Ollama models appear in the output.
 
-Ollama requests are sent with thinking turned off. Current local vision models (Gemma 4, Qwen 3.x) think by default, which made them several times slower on handwriting with no gain in accuracy.
+Ollama requests are sent one page at a time, with thinking turned off. Current local vision models (Gemma 4, Qwen 3.x) think by default, which made them several times slower on handwriting with no gain in accuracy.
 
 ## Project Structure
 

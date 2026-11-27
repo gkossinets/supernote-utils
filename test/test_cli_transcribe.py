@@ -123,3 +123,33 @@ class TestCombinedMode:
         transcribe_file(make_args([dated_png], output=str(tmp_path / "all.md")))
         err = capsys.readouterr().err
         assert "Warning" in err and "2024-09-22" in err
+
+
+class OnePagePerRequestProvider(RecordingProvider):
+    DEFAULT_BATCH_SIZE = 1
+
+
+class TestBatchSizeDefault:
+    def test_provider_default_applies_when_flag_not_given(self):
+        config = transcribe_cli._build_transcription_config(
+            make_args([], batch_size=None), is_multipage=True, provider=OnePagePerRequestProvider("x")
+        )
+        assert config.batch_size == 1
+
+    def test_generic_provider_default_is_five(self):
+        config = transcribe_cli._build_transcription_config(
+            make_args([], batch_size=None), is_multipage=True, provider=RecordingProvider("x")
+        )
+        assert config.batch_size == 5
+
+    def test_explicit_flag_overrides_provider_default(self):
+        config = transcribe_cli._build_transcription_config(
+            make_args([], batch_size=3), is_multipage=True, provider=OnePagePerRequestProvider("x")
+        )
+        assert config.batch_size == 3
+
+    def test_single_page_formats_never_batch(self):
+        config = transcribe_cli._build_transcription_config(
+            make_args([], batch_size=None), is_multipage=False, provider=RecordingProvider("x")
+        )
+        assert config.batch_size == 1

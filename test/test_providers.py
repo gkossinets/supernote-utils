@@ -489,6 +489,15 @@ class TestOllamaModelDetection:
         # gemma4:26b-a4b matched the small models' speed with about half their Cyrillic errors.
         assert OllamaProvider.PREFERRED_MODELS[0] == "gemma4:26b-a4b"
 
+    def test_old_31b_build_replaced_by_mlx(self):
+        # The MLX build was more accurate on Cyrillic and over twice as fast as the old Q4_K_M one.
+        assert "gemma4:31b-mlx" in OllamaProvider.PREFERRED_MODELS
+        assert "gemma4:31b" not in OllamaProvider.PREFERRED_MODELS
+
+    def test_sends_one_page_per_request_by_default(self):
+        # Small local models silently dropped a page in 2 of 4 two-page requests.
+        assert OllamaProvider.DEFAULT_BATCH_SIZE == 1
+
     def test_lists_models_by_vision_capability_not_name(self, fake_ollama):
         # gemma4 and muse-glimmer match no name keyword; qwen3:8b matches "qwen" but is text-only.
         _installed(fake_ollama, {

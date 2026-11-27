@@ -52,7 +52,7 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 
 **Date headers (2026-10-29):** In a real journal corpus (~250 daily pages, Gemini Flash), about 11% of transcribed date headers had a wrong year, and in several the day or weekday had been shifted to agree with the misread year. The prompt's "Logic is Law" rule invited that reconciliation. Three changes: (1) a strict rule in the prompt to transcribe dates, times, and numbers digit by digit and never reconcile a date with its weekday, with "Logic is Law" limited to words; (2) `--date-hint` (default `auto`) passes the date from the input filename to the model as a hint, explicitly subordinate to clear handwriting; (3) after transcription, `core/dates.py` compares the first date in the output with the expected date and checks the weekday, printing warnings to stderr. The text is never corrected automatically, because late-night entries can legitimately carry the next day's date.
 
-**Ollama (2026-11-27):** requests are sent with `think=False`. Current local vision models (Gemma 4, Qwen 3.x) think by default; on the test note, thinking made them 5–12x slower with no gain in accuracy (gemma4:31b: 563 s → 47 s for two pages). Auto-detection (`-m ollama`, `list-models`) uses each model's reported `vision` capability instead of matching names, and prefers `gemma4:26b-a4b`, then `gemma4:26b`, `gemma4:31b`, `gemma4:e4b-it-q8_0`, `gemma4:latest`, else the first vision model. The `ollama` client floor is 0.5.0, the first release with `think`.
+**Ollama (2026-11-27):** requests are sent with `think=False`. Current local vision models (Gemma 4, Qwen 3.x) think by default; on the test note, thinking made them 5–12x slower with no gain in accuracy (gemma4:31b: 563 s → 47 s for two pages). Auto-detection (`-m ollama`, `list-models`) uses each model's reported `vision` capability instead of matching names, and prefers `gemma4:26b-a4b` (speed), then `gemma4:26b`, `gemma4:31b-mlx` (best Cyrillic accuracy, ~3x slower), `gemma4:e4b-it-q8_0`, `gemma4:latest`, else the first vision model. Ollama sends one page per request unless `--batch-size` is given (`DEFAULT_BATCH_SIZE` on the provider class; cloud providers keep 5): gemma4:latest and qwen3.5:9b each silently dropped a whole page in 2 of 4 two-page requests, while single-page requests lost nothing and were no slower for the larger models. The `ollama` client floor is 0.5.0, the first release with `think`.
 
 **Batch processing default: 5 pages** — batching images into a single API call is faster and cheaper than per-page calls. Providers that support multi-image input handle this natively; others fall back to serial calls.
 
@@ -92,9 +92,24 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 
 - **Default:** gemma4:26b-a4b runs as fast as the 4–9B models with about half their Russian errors. gemma4:31b is slightly more accurate but 7x slower.
 - **No measurable effect:** temperature (0.1, 0.5, 1.0); a prompt paragraph on Russian and look-alike Cyrillic letters; one page per request instead of two.
-- **Quantization may matter for e4b:** the 8-bit build was more accurate and more consistent than the 4-bit default. Not yet confirmed on the larger benchmark.
+- **Quantization:** on the test note the 8-bit e4b looked better than the 4-bit default, but on the larger benchmark (one page per request) the two were the same.
 - **Image tokens:** current Gemma 4 builds get ~1100 tokens per page. The older gemma4:31b build was capped at 512 by llama.cpp's batch size (`cap image_max_tokens ... to 512` in the server log); `num_batch: 2048` lifts the cap, with no clear accuracy gain. Ollama ignores an `image_max_tokens` option.
-- **Caveat:** the Russian part of the test note has only 28 words (199 characters), so one misread word moves the Russian CER by about 3 points. Close calls need the larger benchmark in `misc/benchmark/` (about 115 Russian and 145 English words).
+- **Caveat:** the Russian part of the test note has only 28 words (199 characters), so one misread word moves the Russian CER by about 3 points.
+
+2026-11-27 larger benchmark: the two `misc/benchmark/` texts written out by hand (one Russian page with ~580 letters, one English page), one page per request, thinking off, temperature 1.0, 4 runs each:
+
+| Model | Time, 2 pages | CER, Russian | CER, English |
+|---|---|---|---|
+| gemma4:31b-mlx | 30 s | 3.9–4.9% | 1.0–1.3% |
+| gemma4:26b-a4b | 10.5 s | 7.1–9.1% | 1.0–1.1% |
+| qwen3.5:9b | 12.7 s | 13.4–18.9% | 1.1–1.8% |
+| gemma4:e4b-it-q8_0 | 14.5 s | 19.0–21.0% | 2.0–2.4% |
+| gemma4:latest | 8.5 s | 19.7–21.3% | 3.0–4.2% |
+
+- **Both pages in one request inflates Russian scores** on this benchmark: the pages are translations of each other, and models used the English page to fill in Russian words (gemma4:26b-a4b: 3.7–5.9% Russian CER with both pages, 7.1–9.1% alone). Score one page per request.
+- **gemma4:31b-mlx vs the older gemma4:31b build** (two-page requests): 3.7–3.9% vs 5.5–6.8% Russian CER, 30 s vs 72 s.
+- **Still no measurable effect** on gemma4:26b-a4b from temperature 0.5 vs 1.0 or from the Russian prompt paragraph; the paragraph also did nothing for e4b.
+- **Dropped pages:** see the Ollama decision above. gemma4:26b-a4b and both 31b builds never dropped a page in 24 two-page requests.
 
 ---
 

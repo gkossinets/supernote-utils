@@ -17,15 +17,21 @@ except ImportError:
 class OllamaProvider(VisionProvider):
     """Provider for Ollama local vision models"""
 
+    # Small local models silently dropped whole pages when sent several at once
+    # (2 of 4 two-page requests). Requests cost nothing locally, and one page per
+    # request was no slower for the larger models.
+    DEFAULT_BATCH_SIZE = 1
+
     # Auto-detection picks the first of these that is installed, else the first
     # installed model that reports the vision capability. Order comes from a
-    # benchmark on English/Russian handwriting (2026-11-27): gemma4:26b-a4b ran
-    # as fast as the small models with about half their Cyrillic errors; 31b is
-    # slightly more accurate but 7x slower; the 8-bit e4b beat the default 4-bit one.
+    # benchmark on English/Russian handwriting (2026-11-27): gemma4:26b-a4b is
+    # about 3x faster than gemma4:31b-mlx, which makes about half its Cyrillic
+    # errors. The older gemma4:31b build was slower and less accurate than the
+    # MLX one, so it is not listed.
     PREFERRED_MODELS = [
         "gemma4:26b-a4b",
         "gemma4:26b",
-        "gemma4:31b",
+        "gemma4:31b-mlx",
         "gemma4:e4b-it-q8_0",
         "gemma4:latest",
     ]

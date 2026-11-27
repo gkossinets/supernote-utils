@@ -187,10 +187,11 @@ examples:
     transcribe_parser.add_argument(
         "--batch-size",
         type=int,
-        default=5,
+        default=None,
         metavar="N",
-        help="Number of pages to process in a single API call (default: 5). "
-             "Larger batches are faster and more cost-effective. "
+        help="Number of pages to process in a single API call (default: 5; "
+             "1 for Ollama, whose local models can drop pages from larger batches). "
+             "Larger batches are faster and more cost-effective for cloud models. "
              "Use 1 to disable batching and process pages individually. "
              "Only applies to multi-page formats (.note, .pdf)"
     )

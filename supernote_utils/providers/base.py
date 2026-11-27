@@ -8,6 +8,9 @@ from PIL import Image
 class VisionProvider(ABC):
     """Abstract base class for vision LLM providers"""
 
+    # Pages per request when the user doesn't pass --batch-size.
+    DEFAULT_BATCH_SIZE = 5
+
     def __init__(self, model: str | None = None, temperature: float = 1.0):
         """
         Initialize provider.
