@@ -68,7 +68,7 @@ def list_available_models(args):
             print(f"  ollama:{model}", file=sys.stderr)
     else:
         print("  - No vision models found", file=sys.stderr)
-        print("    Install with: ollama pull qwen2.5-vl:7b", file=sys.stderr)
+        print("    Install with: ollama pull gemma4:26b-a4b", file=sys.stderr)
         print("    Make sure Ollama is running at http://localhost:11434", file=sys.stderr)
     print(file=sys.stderr)
 
@@ -85,5 +85,5 @@ def list_available_models(args):
     print("  supernote transcribe input.note -m anthropic:claude-opus-5-5", file=sys.stderr)
     print("  supernote transcribe input.note -m google:gemini-4-carbon", file=sys.stderr)
     print("  supernote transcribe input.note -m openai:gpt-6.2-astra", file=sys.stderr)
-    print("  supernote transcribe input.note -m ollama:qwen2.5-vl:7b", file=sys.stderr)
+    print("  supernote transcribe input.note -m ollama:gemma4:26b-a4b", file=sys.stderr)
     print("  supernote transcribe *.note -d transcribed/", file=sys.stderr)

@@ -168,7 +168,7 @@ examples:
         metavar="MODEL",
         help="Model to use for transcription (default: gemini-flash). "
              "Format: 'provider:model' (e.g., anthropic:claude-opus-5-5, "
-             "google:gemini-4-carbon, openai:gpt-6.2-astra, ollama:qwen2.5-vl:7b) "
+             "google:gemini-4-carbon, openai:gpt-6.2-astra, ollama:gemma4:26b-a4b) "
              "or a shortcut: claude, claude-sonnet, claude-haiku, claude-opus, gemini, gemini-pro, "
              "gemini-flash, gpt, gpt-mini, openai, ollama. "
              "Run 'supernote list-models' to see all available models"

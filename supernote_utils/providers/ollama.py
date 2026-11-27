@@ -18,8 +18,17 @@ class OllamaProvider(VisionProvider):
     """Provider for Ollama local vision models"""
 
     # Auto-detection picks the first of these that is installed, else the first
-    # installed model that reports the vision capability.
-    PREFERRED_MODELS = ["qwen2.5-vl:7b"]
+    # installed model that reports the vision capability. Order comes from a
+    # benchmark on English/Russian handwriting (2026-11-27): gemma4:26b-a4b ran
+    # as fast as the small models with about half their Cyrillic errors; 31b is
+    # slightly more accurate but 7x slower; the 8-bit e4b beat the default 4-bit one.
+    PREFERRED_MODELS = [
+        "gemma4:26b-a4b",
+        "gemma4:26b",
+        "gemma4:31b",
+        "gemma4:e4b-it-q8_0",
+        "gemma4:latest",
+    ]
 
     def __init__(
         self,
@@ -51,7 +60,7 @@ class OllamaProvider(VisionProvider):
             if not detected_model:
                 raise ProviderNotAvailableError(
                     "No vision models found in Ollama. "
-                    "Install one with: ollama pull qwen2.5-vl:7b"
+                    "Install one with: ollama pull gemma4:26b-a4b"
                 )
             self.actual_model = detected_model
             print(f"Auto-detected Ollama model: {self.actual_model}", file=sys.stderr)

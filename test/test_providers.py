@@ -485,6 +485,10 @@ class TestOllamaModelDetection:
     VISION = ["completion", "vision", "thinking"]
     TEXT = ["completion", "thinking"]
 
+    def test_default_preference_is_current(self):
+        # gemma4:26b-a4b matched the small models' speed with about half their Cyrillic errors.
+        assert OllamaProvider.PREFERRED_MODELS[0] == "gemma4:26b-a4b"
+
     def test_lists_models_by_vision_capability_not_name(self, fake_ollama):
         # gemma4 and muse-glimmer match no name keyword; qwen3:8b matches "qwen" but is text-only.
         _installed(fake_ollama, {

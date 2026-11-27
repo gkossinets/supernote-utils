@@ -46,7 +46,7 @@ def parse_model_spec(model_spec: str) -> tuple[str, str | None, dict]:
 
     Accepts formats:
     - Explicit: "anthropic:claude-opus-5-5", "google:gemini-4-carbon",
-      "openai:gpt-6.2-astra", "ollama:qwen2.5-vl:7b"
+      "openai:gpt-6.2-astra", "ollama:gemma4:26b-a4b"
     - Shortcuts: see SHORTCUTS
 
     Args:
@@ -67,7 +67,7 @@ def parse_model_spec(model_spec: str) -> tuple[str, str | None, dict]:
         return SHORTCUTS[model_spec_lower]
 
     if ":" in model_spec:
-        # Split only on first colon (ollama models can have colons like "qwen2.5-vl:7b")
+        # Split only on first colon (ollama models can have colons like "gemma4:26b-a4b")
         provider, _, model = model_spec.partition(":")
         provider = provider.lower()
 
@@ -88,7 +88,7 @@ def parse_model_spec(model_spec: str) -> tuple[str, str | None, dict]:
     raise ConfigurationError(
         f"Invalid model specification: '{model_spec}'. "
         f"Use 'provider:model' format (e.g., 'anthropic:claude-opus-5-5', "
-        f"'google:gemini-4-carbon', 'openai:gpt-6.2-astra', 'ollama:qwen2.5-vl:7b') "
+        f"'google:gemini-4-carbon', 'openai:gpt-6.2-astra', 'ollama:gemma4:26b-a4b') "
         f"or a shortcut: {', '.join(SHORTCUTS)}"
     )
 
@@ -129,7 +129,7 @@ def create_provider(
     Args:
         model_spec: Model specification in "provider:model" format or shortcut
                    Examples: "anthropic:claude-opus-5-5", "google:gemini-4-carbon",
-                            "ollama:qwen2.5-vl:7b", "claude-sonnet", "gemini-flash"
+                            "ollama:gemma4:26b-a4b", "claude-sonnet", "gemini-flash"
         config: Provider configuration (uses defaults if None)
         temperature: Generation temperature
         temperature_was_set: Whether temperature was explicitly set by user (vs using default)

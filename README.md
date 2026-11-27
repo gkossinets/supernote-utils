@@ -118,7 +118,7 @@ supernote transcribe scan.jpg -o output.md
 supernote transcribe input.note -o output.md -m claude-sonnet
 
 # Use local Ollama model
-supernote transcribe input.note -o output.md -m ollama:qwen2.5-vl:7b
+supernote transcribe input.note -o output.md -m ollama:gemma4:26b-a4b
 
 # Use a specific model
 supernote transcribe input.pdf -o output.md -m anthropic:claude-opus-5-5
@@ -208,14 +208,14 @@ Run `supernote list-models` to see what's available in your environment (it prin
 | `claude-opus` | `anthropic:claude-opus-5-5` — most capable Claude, about 2× Sonnet's price |
 | `gpt`, `openai` | `openai:gpt-6.2-sol` |
 | `gpt-mini` | `openai:gpt-6-luna` — faster, cheaper |
-| `ollama` | Auto-detected local vision model |
+| `ollama` | Auto-detected local vision model, preferring `gemma4:26b-a4b` |
 
 **Explicit provider:model format:**
 ```bash
 -m anthropic:claude-opus-5-5
 -m google:gemini-4-carbon
 -m openai:gpt-6.2-astra
--m ollama:qwen2.5-vl:7b
+-m ollama:gemma4:26b-a4b
 ```
 
 **Note:** Only locally installed Ollama models appear in the output.
