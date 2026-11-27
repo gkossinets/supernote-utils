@@ -62,7 +62,7 @@ After any change to CLI behaviour, defaults, flags, supported formats, or model 
 
 The CLI accepts `provider:model` strings (e.g., `anthropic:claude-opus-5-5`) or shortcuts (`claude`, `gemini-flash`, `gpt`, `ollama`). The `SHORTCUTS` table and `parse_model_spec` live in `providers/__init__.py`; shortcuts point at each provider class's `DEFAULT_*` model constants, and `list-models` prints them via `describe_shortcuts()`. To change a default model, edit the provider's constant and the README shortcuts table.
 
-Claude and OpenAI providers never send `temperature` (current models reject it); Gemini and Ollama do.
+Claude and OpenAI providers never send `temperature` (current models reject it); Gemini and Ollama do. Gemini 3+ requests send `thinking_level=LOW` and Ollama requests send `think=False`; Claude and OpenAI use their default effort. See PROJECT.md for the measurements behind each.
 
 ## Adding a new provider
 

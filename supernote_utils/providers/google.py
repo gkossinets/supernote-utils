@@ -112,6 +112,15 @@ class GoogleProvider(VisionProvider):
         """Transcribe multiple images in a single API call"""
         config = types.GenerateContentConfig(
             temperature=self.temperature,
+            # On a Russian/English handwriting benchmark (2026-11-27), default thinking made
+            # Gemini 3.8 Flash spend ~3300 output tokens and 11-143 s per page; low thinking
+            # took ~250 tokens and 4 s with nearly the same accuracy, and Gemini Pro was
+            # faster and just as accurate. Gemini 2.5 uses a token budget, not a level.
+            thinking_config=(
+                types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW)
+                if self._is_reasoning_model(self.actual_model)
+                else None
+            ),
             safety_settings=[
                 types.SafetySetting(
                     category=category,

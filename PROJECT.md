@@ -54,6 +54,8 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 
 **Ollama (2026-11-27):** requests are sent with `think=False`. Current local vision models (Gemma 4, Qwen 3.x) think by default; on the test note, thinking made them 5–12x slower with no gain in accuracy (gemma4:31b: 563 s → 47 s for two pages). Auto-detection (`-m ollama`, `list-models`) uses each model's reported `vision` capability instead of matching names, and prefers `gemma4:26b-a4b` (speed), then `gemma4:26b`, `gemma4:31b-mlx` (best Cyrillic accuracy, ~3x slower), `qwen3.5:9b` (best small model), `gemma4:e4b-it-q8_0`, `gemma4:latest`, else the first vision model. Ollama sends one page per request unless `--batch-size` is given (`DEFAULT_BATCH_SIZE` on the provider class; cloud providers keep 5): gemma4:latest and qwen3.5:9b each silently dropped a whole page in 2 of 4 two-page requests, while single-page requests lost nothing and were no slower for the larger models. The `ollama` client floor is 0.5.0, the first release with `think`. If a model reasons anyway (qwen3-vl:8b), the provider prints one warning.
 
+**Gemini thinking: low (2026-11-27):** Gemini 3+ requests send `thinking_level=LOW`. On the benchmark, default thinking made Flash spend ~3300 output tokens and 11–143 s per page; low took ~250 tokens and 4 s, with Russian CER 0.5–1.2% vs 0.4–0.8%. Gemini Pro at low was faster and as accurate. A spot check confirmed every listed Gemini model accepts it (Flash 4–6 s per page). Gemini 2.5 models, which use a token budget instead, are left at their default. Claude and OpenAI keep their default effort: Opus lost accuracy at `low`, and `gpt` gained little.
+
 **Batch processing default: 5 pages** — batching images into a single API call is faster and cheaper than per-page calls. Providers that support multi-image input handle this natively; others fall back to serial calls.
 
 **Page check for batches (2026-11-27):** the batch prompt asks the model to start each page with `<!-- page N -->` (position within the request). Pages without a marker are transcribed again on their own; a response with no markers at all is redone page by page, since there's no way to tell what is missing (no tested model ignored the markers). Text before the first marker, or after an out-of-range marker, is kept and reported. Because page boundaries are known, `--page-separator` now labels every page in batch mode too.
@@ -144,10 +146,13 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 
 ## Future Direction
 
-### Open questions (2026-11-27, updated after the second session)
-- **Thinking level for Gemini.** Low thinking made Gemini Flash about 6x faster with nearly the same accuracy (see the thinking table). Decide whether to send `thinking_level="low"` by default for Gemini, maybe behind a flag; recheck Flash latency at default thinking at another time of day first.
+### Open questions
 - **Memory guidance.** `ollama ps` on the M1 Max shows gemma4:26b-a4b at 16–17 GB and qwen3.5:9b at about 8 GB once loaded, which fits the README's "32 GB / 16 GB" with room for the OS. Still unchecked on smaller machines.
-- **A `.note` fixture without handwriting.** Needs a note drawn on the device (shapes or doodles only). The missing-file test now runs without it.
+- **A flag for the thinking level?** Gemini 3+ now always uses low thinking. If a hard page ever needs more, a `--thinking` option could expose the level for every provider (Gemini level, Claude/OpenAI effort).
+- **Resume/checkpoint** support for large documents (partial transcription on failure).
+- **HTML report** output from the test suite.
+- **Cost estimation** per transcription run.
+- **Two-pass verification:** run two models and highlight differences.
 
 ### Public handwriting benchmark
 The repo ships no handwriting, so nobody can rerun the benchmarks as they are. To make them reproducible, look for public-domain (or openly licensed) handwritten Russian and English pages with known transcriptions, e.g. scanned letters or manuscripts in archives, or handwriting datasets with permissive licenses. They should be similar to Supernote pages: lined, one writer per page, everyday script, and contain enough Cyrillic (all 33 letters, look-alike runs such as и/ш/т/л/м) to separate models. The texts in `misc/benchmark/` show what such pages should cover.
@@ -158,12 +163,6 @@ Candidates found (2026-11-27; licences checked on the source pages unless noted)
 - **English: GNHK** (GoodNotes, CC-BY-4.0). Modern full pages photographed, often lined; word-level ground truth. Size (~687 images) unverified.
 - **English: ai-forever/school_notebooks_EN** (MIT). 90 pages, same format as the Russian set, which helps comparisons.
 - Ruled out: HKR (CC-BY-NC-ND), IAM (non-commercial, registration), CVL (NC), Digital Peter and the Tsiolkovsky papers (18th century or pre-1918 spelling), Bentham (18th century).
-
-### Near-term CLI improvements
-- Resume/checkpoint support for large documents (partial transcription on failure)
-- HTML report output from test suite
-- Cost estimation per transcription run
-- Two-pass verification (run two models, highlight differences)
 
 ### Desktop app (planned, not started)
 A GUI application targeting non-technical Supernote users. Key decisions made:
@@ -182,7 +181,7 @@ The Python CLI (`supernote-utils`) would remain as the reference implementation 
 
 ## Test Files
 
-Tests that parse `.note` files look for `test/test.note`. No `.note` file is distributed with the repository, so on a fresh clone those tests skip; everything else runs offline.
+`test/doodles.note` — a one-page note with shapes only (no writing), the only `.note` file in the repository and the fixture for the `.note` parsing and PDF tests. All tests run offline on a fresh clone. `.gitignore` excludes every other `.note`.
 
 `misc/benchmark/handwriting-ru.md`, `handwriting-en.md` — texts to copy by hand for a benchmark (one Russian page, one English page). They cover every letter of both alphabets, look-alike letter runs, unusual names, numbers, and lists of unrelated words that can't be guessed from context. To score a model, the reference must match the handwritten page exactly, slips included; keep such page-matched copies and the `.note` files in `misc/benchmark/local/` (gitignored). See README, "Benchmark on your own handwriting".
 

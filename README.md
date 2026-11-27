@@ -157,7 +157,7 @@ supernote convert input.note          # writes input.pdf next to input.note
 
 Temperature controls the randomness of LLM generation. The CLI default is `1.0`.
 
-- **Gemini:** `1.0` (the default; do not lower — [Google recommends 1.0](https://ai.google.dev/gemini-api/docs/gemini-3#temperature) for Gemini 3 and later; lower values may cause looping or degraded output). The code sets Gemini 3+ models to 1.0 unless you override it, and prints a warning if you do.
+- **Gemini:** `1.0` (the default; do not lower — [Google recommends 1.0](https://ai.google.dev/gemini-api/docs/gemini-3#temperature) for Gemini 3 and later; lower values may cause looping or degraded output). The code sets Gemini 3+ models to 1.0 unless you override it, and prints a warning if you do. Gemini 3+ requests also use Google's low thinking level: on a two-page benchmark it was about 6x faster than the default level (around 4 s per page) with nearly the same accuracy.
 - **Ollama:** `--temperature 0.5` (local models benefit from some flexibility to handle ambiguity)
 - **Claude and OpenAI:** `--temperature` is ignored, with a warning. Current models from both providers use fixed sampling settings and reject the parameter.
 

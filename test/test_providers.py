@@ -106,6 +106,18 @@ class TestGoogleProvider:
         assert thresholds == {google_module.types.HarmBlockThreshold.BLOCK_ONLY_HIGH}
         assert len(config.safety_settings) == 4
 
+    @pytest.mark.parametrize("model", ["gemini-3.8-flash", "gemini-4-hydrogen", "gemini-3.5-flash-lite"])
+    def test_gemini_3_and_later_use_low_thinking(self, fake_genai_client, model):
+        GoogleProvider(api_key="k", model=model).transcribe_image(_image(), "PROMPT")
+        config = fake_genai_client.models.generate_content.call_args.kwargs["config"]
+        assert config.thinking_config.thinking_level == google_module.types.ThinkingLevel.LOW
+
+    def test_older_gemini_keeps_default_thinking(self, fake_genai_client):
+        # Gemini 2.5 controls thinking with a token budget, not a level.
+        GoogleProvider(api_key="k", model="gemini-2.5-flash").transcribe_image(_image(), "PROMPT")
+        config = fake_genai_client.models.generate_content.call_args.kwargs["config"]
+        assert config.thinking_config is None
+
     def test_single_image_call_sends_prompt_then_image(self, fake_genai_client):
         provider = GoogleProvider(api_key="k")
         image = _image()
