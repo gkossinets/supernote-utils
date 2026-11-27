@@ -157,7 +157,7 @@ supernote convert input.note          # writes input.pdf next to input.note
 Temperature controls the randomness of LLM generation. The CLI default is `1.0`.
 
 - **Gemini:** `1.0` (the default; do not lower — [Google recommends 1.0](https://ai.google.dev/gemini-api/docs/gemini-3#temperature) for Gemini 3 and later; lower values may cause looping or degraded output). The code sets Gemini 3+ models to 1.0 unless you override it, and prints a warning if you do. Gemini 3+ requests also use Google's low thinking level: on a two-page benchmark it was about 6x faster than the default level (around 4 s per page) with nearly the same accuracy.
-- **Ollama:** `--temperature 0.5` (local models benefit from some flexibility to handle ambiguity)
+- **Ollama:** the default `1.0` is fine; 0.1, 0.5 and 1.0 made no measurable difference on the benchmark.
 - **Claude and OpenAI:** `--temperature` is ignored, with a warning. Current models from both providers use fixed sampling settings and reject the parameter.
 
 Values above 1.0 increase hallucination risk and are not recommended for transcription.
@@ -213,14 +213,14 @@ python misc/calibrate.py --input en.note --reference misc/benchmark/handwriting-
 | **Recommended** | `gemma4:26b-a4b` | 16 GB | ~5 s/page | ~1% | 7–9% |
 | **For smaller computers** | `qwen3.5:9b` | 7.6 GB | ~6 s/page | 1–2% | 13–19% |
 
-Measured on a two-page handwritten copy of the texts in [`misc/benchmark/`](misc/benchmark/) (one English page, one Russian page) on an M1 Max with 64 GB of memory. Errors are the share of characters transcribed wrong. For comparison, Gemini Flash made under 1% errors in both languages on the same pages. As a rough guide, gemma4:26b-a4b wants a computer with 32 GB of memory or more, and qwen3.5:9b fits in 16 GB.
+Measured on a two-page handwritten copy of the texts in [`misc/benchmark/`](misc/benchmark/) (one English page, one Russian page) on an M1 Max with 64 GB of memory. Errors are the share of characters transcribed wrong. For cloud models on the same pages, see [How the models compare](#how-the-models-compare). As a rough guide, gemma4:26b-a4b wants a computer with 32 GB of memory or more, and qwen3.5:9b fits in 16 GB.
 
 ```bash
 ollama pull gemma4:26b-a4b        # or: ollama pull qwen3.5:9b
 supernote transcribe notes.note -m ollama -o notes.md
 ```
 
-With `-m ollama`, the tool picks the first of these it finds installed: `gemma4:26b-a4b`, `gemma4:31b-mlx`, `qwen3.5:9b`, `gemma4:e4b-it-q8_0`, `gemma4:latest`, and otherwise any installed model that can read images. Name a model explicitly with `-m ollama:MODEL`.
+With `-m ollama`, the tool picks the first of these it finds installed: `gemma4:26b-a4b`, `gemma4:26b`, `gemma4:31b-mlx`, `qwen3.5:9b`, `gemma4:e4b-it-q8_0`, `gemma4:latest`, and otherwise any installed model that can read images. Name a model explicitly with `-m ollama:MODEL`.
 
 - **Most accurate local option:** `gemma4:31b-mlx` (19 GB) makes about half the Russian errors of gemma4:26b-a4b, but is about 3× slower.
 - **Not recommended:** `gemma4:12b` invents plausible Russian words; `qwen3-vl:8b` keeps reasoning even when asked not to, which makes it very slow, and was the least accurate.
@@ -254,6 +254,22 @@ Run `supernote list-models` to see what's available in your environment (it prin
 
 **Note:** Only locally installed Ollama models appear in the output. See [Local Models (Ollama)](#local-models-ollama) for which to install.
 
+### How the models compare
+
+| Model | Runs on | Time per page | Errors, Russian | Errors, English |
+|---|---|---|---|---|
+| `gemini-pro` | cloud | ~5 s | 0–0.3% | 0.1% |
+| `claude-opus` | cloud | ~8 s | 0.3–0.8% | 0% |
+| `gpt` | cloud | ~6 s | 0.4–0.9% | 0–0.1% |
+| `gemini-flash` (default) | cloud | ~4 s | 0.5–1.2% | 0.1% |
+| `claude` (Sonnet) | cloud | ~3.5 s | 2.0–2.5% | 0–0.1% |
+| `ollama:gemma4:31b-mlx` | your computer | ~15 s | 3.9–4.9% | 1.0–1.3% |
+| `ollama:gemma4:26b-a4b` | your computer | ~5 s | 7.1–9.1% | 1.0–1.1% |
+| `gpt-mini` | cloud | ~16 s | 8.5–9.2% | 0.7–1.9% |
+| `ollama:qwen3.5:9b` | your computer | ~6 s | 13–19% | 1–2% |
+
+Measured on a two-page handwritten copy of the texts in [`misc/benchmark/`](misc/benchmark/) (one Russian page, one English page), four runs per model, one page per request, with the tool's current settings. Errors are the share of characters transcribed wrong. Cloud times vary with server load; local times are from an M1 Max with 64 GB of memory. `claude-haiku` was not tested. Your handwriting may rank the models differently: see [Benchmark on your own handwriting](#benchmark-on-your-own-handwriting).
+
 ## Project Structure
 
 ```
@@ -273,9 +289,9 @@ Run `supernote list-models` to see what's available in your environment (it prin
 
 ## Tips for Best Results
 
-1. **Use the recommended temperature** for your provider (1.0 for Gemini, 0.5 for Ollama)
+1. **Leave the temperature at its default**; it made no measurable difference in testing
 2. **Run the calibration script** (`misc/calibrate.py`) to find the best model for your handwriting
-3. **For multilingual content**, Claude Sonnet and Gemini Pro tend to perform best
+3. **For non-Latin scripts** such as Cyrillic, Gemini Pro, Claude Opus and `gpt` were the most accurate; Claude Sonnet made several times more errors (see [How the models compare](#how-the-models-compare))
 4. **For privacy-sensitive content**, use Ollama with local models
 5. **Test multiple models** — different models excel at different handwriting styles and languages
 

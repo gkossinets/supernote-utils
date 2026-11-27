@@ -143,6 +143,38 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 - **Page drops with page markers (two-page requests, 4 each):** `claude`, `claude-opus`, `gpt`, `gpt-mini` returned both markers and both pages every time, as did gemma4:26b-a4b, gemma4:latest and gemma4:e4b-it-q8_0 via Ollama. qwen3.5:9b dropped the English page once in 4, with no error and only one marker; the page check catches exactly this. No model ignored the markers.
 - **Ollama `think=False`** is accepted by qwen2.5vl:7b, which has no thinking capability (no error). qwen3-vl:8b still thinks regardless (20,163 characters on one page); the provider now warns about it.
 
+### Combined results: all models on the benchmark pages
+
+The two `misc/benchmark/` pages, one page per request, CER after stripping Markdown. Sorted by Russian CER. **Bold** = the setting the tool uses now. Local rows come from the 2026-11-27 Ollama benchmark (M1 Max, times exclude the first run, which loads the model); cloud rows from the same day's cloud runs (wall-clock, depends on server load). Rows with 1 run are spot checks; * marks single first runs whose time includes loading the model. The Russian page has ~750 characters, so one wrong letter is ~0.13 points: rows 1–8 are within a few letters of each other.
+
+| # | Model | Where | Thinking | Runs | Time, 2 pages | CER, Russian | CER, English |
+|---|---|---|---|---|---|---|---|
+| 1 | gemini-4-carbon | cloud | **low** | 1 | 10 s | 0.0% | 0.1% |
+| 2 | gemini-4-argon | cloud | **low** | 1 | 18 s | 0.0% | 0.1% |
+| 3 | **`gemini-pro`** (gemini-4-hydrogen) | cloud | **low** | 4 | 9–11 s | 0.0–0.3% | 0.1% |
+| 4 | `gemini-pro` | cloud | default | 4 | 15–25 s | 0.1% | 0.1–0.3% |
+| 5 | gemini-4-neon | cloud | **low** | 1 | 22 s | 0.3% | 0.1% |
+| 6 | **`claude-opus`** (Opus 5.5) | cloud | **default** | 4 | 15–20 s | 0.3–0.8% | 0.0% |
+| 7 | `gemini-flash` | cloud | default | 4 | 52–159 s | 0.4–0.8% | 0.2–0.5% |
+| 8 | **`gpt`** (gpt-6.2-sol) | cloud | **default** | 4 | 9–14 s | 0.4–0.9% | 0.0–0.1% |
+| 9 | `gpt` | cloud | low | 4 | 9–10 s | 0.5–0.9% | 0.0–0.1% |
+| 10 | **`gemini-flash`** (CLI default) | cloud | **low** | 4 | 7–9 s | 0.5–1.2% | 0.1% |
+| 11 | `claude-opus` | cloud | low | 4 | 7 s | 1.2–1.9% | 0.0% |
+| 12 | gemini-3.5-flash-lite | cloud | **low** | 1 | 4 s | 1.9% | 0.2% |
+| 13 | **`claude`** (Sonnet 5.5) | cloud | **default** | 4 | 6–7 s | 2.0–2.5% | 0.0–0.1% |
+| 14 | `claude` | cloud | low | 4 | 6–7 s | 2.0–2.5% | 0.0–0.1% |
+| 15 | **gemma4:31b-mlx** | local | **off** | 4 | 30 s | 3.9–4.9% | 1.0–1.3% |
+| 16 | **gemma4:26b-a4b** (`ollama` default) | local | **off** | 4 | 10.5 s | 7.1–9.1% | 1.0–1.1% |
+| 17 | **`gpt-mini`** (gpt-6-luna) | cloud | **default** | 4 | 27–38 s | 8.5–9.2% | 0.7–1.9% |
+| 18 | `gpt-mini` | cloud | low | 4 | 14–16 s | 8.6–12.3% | 0.6–1.2% |
+| 19 | **qwen3.5:9b** | local | **off** | 4 | 12.7 s | 13.4–18.9% | 1.1–1.8% |
+| 20 | **gemma4:e4b-it-q8_0** | local | **off** | 4 | 14.5 s | 19.0–21.0% | 2.0–2.4% |
+| 21 | **gemma4:latest** | local | **off** | 4 | 8.5 s | 19.7–21.3% | 3.0–4.2% |
+| 22 | qwen2.5vl:7b | local | none (no thinking) | 1 | 73 s* | 23.9% | 1.3% |
+| 23 | qwen3-vl:8b | local | thinks regardless | 1 | 503 s* | 31.8% | 1.6% |
+
+Not on these pages (test note only): the older gemma4:31b build, gemma4:12b, qwen3.8:27b, muse-glimmer:30b-mlx. Not tested at all: `claude-haiku`. Two-page runs are left out because the pages are translations of each other and models borrow across them. The README's "How the models compare" table is a shortened version of this one; update both together.
+
 ---
 
 ## Future Direction
