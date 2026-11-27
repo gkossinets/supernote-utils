@@ -220,6 +220,8 @@ Run `supernote list-models` to see what's available in your environment (it prin
 
 **Note:** Only locally installed Ollama models appear in the output.
 
+Ollama requests are sent with thinking turned off. Current local vision models (Gemma 4, Qwen 3.x) think by default, which made them several times slower on handwriting with no gain in accuracy.
+
 ## Project Structure
 
 ```

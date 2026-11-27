@@ -72,48 +72,27 @@ class OllamaProvider(VisionProvider):
 
     def transcribe_image(self, image: Image.Image, prompt: str) -> str:
         """Transcribe image using Ollama local model"""
-        try:
-            # Convert PIL Image to bytes
-            image_bytes = self._image_to_bytes(image)
-
-            # Call Ollama chat with image
-            response = ollama.chat(
-                model=self.actual_model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt,
-                        "images": [image_bytes],
-                    }
-                ],
-                options={
-                    "temperature": self.temperature,
-                },
-            )
-            return response["message"]["content"]
-
-        except Exception as e:
-            raise ProviderAPIError(f"Ollama API error: {str(e)}") from e
+        return self.transcribe_images_batch([image], prompt)
 
     def transcribe_images_batch(self, images: list[Image.Image], prompt: str) -> str:
         """Transcribe multiple images in a single API call"""
         try:
-            # Convert all images to bytes
-            image_bytes_list = [self._image_to_bytes(image) for image in images]
-
-            # Call Ollama chat with multiple images
             response = ollama.chat(
                 model=self.actual_model,
                 messages=[
                     {
                         "role": "user",
                         "content": prompt,
-                        "images": image_bytes_list,
+                        "images": [self._image_to_bytes(image) for image in images],
                     }
                 ],
                 options={
                     "temperature": self.temperature,
                 },
+                # Current local vision models (Gemma 4, Qwen 3.x) think by default. On a
+                # 2-page test note thinking made them several times slower with no gain
+                # in accuracy.
+                think=False,
             )
             return response["message"]["content"]
 

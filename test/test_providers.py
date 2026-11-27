@@ -430,3 +430,44 @@ class TestOpenAIProvider:
         fake_openai_client.responses.create.side_effect = RuntimeError("boom")
         with pytest.raises(ProviderAPIError, match="boom"):
             OpenAIProvider(api_key="k").transcribe_image(_image(), "PROMPT")
+
+
+# ---------------------------------------------------------------------------
+# OllamaProvider
+# ---------------------------------------------------------------------------
+
+from supernote_utils.providers import ollama as ollama_module  # noqa: E402
+from supernote_utils.providers.ollama import OllamaProvider  # noqa: E402
+
+
+@pytest.fixture
+def fake_ollama(monkeypatch):
+    fake = MagicMock()
+    fake.chat.return_value = {"message": {"content": "transcribed"}}
+    monkeypatch.setattr(ollama_module, "ollama", fake)
+    return fake
+
+
+class TestOllamaProvider:
+    def test_single_image_disables_thinking(self, fake_ollama):
+        # Thinking made local vision models several times slower with no gain in accuracy.
+        OllamaProvider(model="gemma4:latest").transcribe_image(_image(), "PROMPT")
+        assert fake_ollama.chat.call_args.kwargs["think"] is False
+
+    def test_batch_disables_thinking(self, fake_ollama):
+        OllamaProvider(model="gemma4:latest").transcribe_images_batch([_image(), _image()], "PROMPT")
+        kwargs = fake_ollama.chat.call_args.kwargs
+        assert kwargs["think"] is False
+        assert len(kwargs["messages"][0]["images"]) == 2
+
+    def test_sends_temperature(self, fake_ollama):
+        OllamaProvider(model="gemma4:latest", temperature=0.5).transcribe_image(_image(), "PROMPT")
+        assert fake_ollama.chat.call_args.kwargs["options"]["temperature"] == 0.5
+
+    def test_returns_message_content(self, fake_ollama):
+        assert OllamaProvider(model="m").transcribe_image(_image(), "PROMPT") == "transcribed"
+
+    def test_sdk_error_is_wrapped(self, fake_ollama):
+        fake_ollama.chat.side_effect = RuntimeError("boom")
+        with pytest.raises(ProviderAPIError, match="boom"):
+            OllamaProvider(model="m").transcribe_image(_image(), "PROMPT")

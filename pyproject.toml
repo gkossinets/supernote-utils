@@ -27,7 +27,7 @@ dependencies = [
     # Core transcription dependencies
     "anthropic>=2.14.0",
     "google-genai>=3.6.0",
-    "ollama>=0.1.0",
+    "ollama>=0.5.0",
     "pillow>=9.0.0",
 
     # Note format parsing dependencies (from extracted supernotelib code)
