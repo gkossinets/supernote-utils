@@ -89,9 +89,10 @@ class TestTranscriberSinglePageMode:
 
 class TestTranscriberBatchMode:
     def test_batch_calls_transcribe_images_batch(self):
-        provider = FixedProvider("batch result")
+        provider = FixedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb\n<!-- page 3 -->\nc")
         t = Transcriber(provider, TranscriptionConfig(batch_size=3))
         result = t.transcribe_images(make_images(3))
+        assert result == "a\n\nb\n\nc"
         assert provider.batch_call_count == 1
         assert provider.single_call_count == 0
 
@@ -162,3 +163,94 @@ class TestTranscriberEdgeCases:
         t = Transcriber(provider, TranscriptionConfig(batch_size=1))
         result = t.transcribe_images(make_images(1))
         assert result == "clean text"
+
+
+# ---------------------------------------------------------------------------
+# Page check in batched requests
+# ---------------------------------------------------------------------------
+
+class ScriptedProvider(FixedProvider):
+    """Returns a fixed batch response and a numbered text for each single-page call."""
+
+    def __init__(self, batch_response: str):
+        super().__init__()
+        self.batch_response = batch_response
+
+    def transcribe_image(self, image: Image.Image, prompt: str) -> str:
+        self.single_call_count += 1
+        return f"redo {self.single_call_count}"
+
+    def transcribe_images_batch(self, images: List[Image.Image], prompt: str) -> str:
+        self.batch_call_count += 1
+        self.last_batch_prompt = prompt
+        return self.batch_response
+
+
+class TestBatchPageCheck:
+    def test_batch_prompt_asks_for_page_markers(self):
+        provider = ScriptedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb")
+        Transcriber(provider, TranscriptionConfig(batch_size=2)).transcribe_images(make_images(2))
+        assert "<!-- page 1 -->" in provider.last_batch_prompt
+        assert "<!-- page 2 -->" in provider.last_batch_prompt
+
+    def test_markers_are_removed_from_output(self):
+        provider = ScriptedProvider("<!-- page 1 -->\nfirst\n\n<!-- page 2 -->\nsecond")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2)) == "first\n\nsecond"
+        assert provider.single_call_count == 0
+
+    def test_missing_page_is_redone_alone(self, capsys):
+        provider = ScriptedProvider("<!-- page 1 -->\nfirst\n<!-- page 3 -->\nthird")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=3))
+        assert t.transcribe_images(make_images(3)) == "first\n\nredo 1\n\nthird"
+        assert provider.single_call_count == 1
+        assert "page 2" in capsys.readouterr().err
+
+    def test_page_numbers_are_relative_to_the_batch(self):
+        # Pages 4-5 of a document are pages 1-2 of the second batch.
+        provider = ScriptedProvider("<!-- page 1 -->\nx\n<!-- page 2 -->\ny")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=3))
+        result = t.transcribe_images(make_images(5))
+        assert provider.single_call_count == 1  # page 3 of the first batch is missing
+        assert result == "x\n\ny\n\nredo 1\n\nx\n\ny"
+
+    def test_no_markers_redoes_every_page(self, capsys):
+        provider = ScriptedProvider("unmarked text")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2)) == "redo 1\n\nredo 2"
+        assert "no page markers" in capsys.readouterr().err
+
+    def test_empty_page_counts_as_present(self):
+        provider = ScriptedProvider("<!-- page 1 -->\n<!-- page 2 -->\nsecond")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2)) == "second"
+        assert provider.single_call_count == 0
+
+    def test_text_before_first_marker_is_kept(self, capsys):
+        provider = ScriptedProvider("stray\n<!-- page 1 -->\na\n<!-- page 2 -->\nb")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2)) == "stray\na\n\nb"
+        assert "before the first page marker" in capsys.readouterr().err
+
+    def test_marker_spacing_and_case_are_tolerated(self):
+        provider = ScriptedProvider("<!--Page 1-->\na\n  <!--  PAGE 2  -->  \nb")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2)) == "a\n\nb"
+
+    def test_out_of_range_marker_is_reported(self, capsys):
+        provider = ScriptedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb\n<!-- page 7 -->\nc")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2)) == "a\n\nb\n\nc"
+        assert "page 7" in capsys.readouterr().err
+
+    def test_page_separators_are_per_page_in_batch_mode(self):
+        provider = ScriptedProvider("<!-- page 1 -->\na\n<!-- page 2 -->\nb")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2, page_separator=True))
+        buf = io.StringIO()
+        t.transcribe_images(make_images(2), output=buf)
+        assert buf.getvalue() == "---- Page 1 ----\na\n\n---- Page 2 ----\nb\n"
+
+    def test_markers_are_stripped_before_plain_text_conversion(self):
+        provider = ScriptedProvider("<!-- page 1 -->\n**a**\n<!-- page 2 -->\nb")
+        t = Transcriber(provider, TranscriptionConfig(batch_size=2))
+        assert t.transcribe_images(make_images(2), plain_text=True) == "a\n\nb"

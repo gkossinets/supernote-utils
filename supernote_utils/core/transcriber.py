@@ -1,5 +1,6 @@
 """Unified transcription engine for all input types"""
 
+import re
 import sys
 from pathlib import Path
 from typing import TextIO
@@ -10,6 +11,10 @@ from supernote_utils.config import TranscriptionConfig
 from supernote_utils.core.image_processor import ImageProcessor
 from supernote_utils.core.prompts import get_prompt
 from supernote_utils.providers.base import VisionProvider
+
+# A line holding only a page marker such as "<!-- page 2 -->". Batched requests ask the
+# model to start each page with one so that a silently dropped page can be detected.
+_PAGE_MARKER = re.compile(r"^\s*<!--\s*page\s+(\d+)\s*-->\s*$", re.IGNORECASE | re.MULTILINE)
 
 
 class Transcriber:
@@ -42,11 +47,11 @@ class Transcriber:
         batch_instruction = f"""You are transcribing {num_pages} consecutive pages from a personal handwritten document. The pages are provided in order.
 
 **CRITICAL: Output Format Requirements:**
-- Transcribe all {num_pages} pages as continuous flowing text
-- Preserve page boundaries by maintaining natural paragraph breaks between pages
-- Do NOT add page numbers, headers, or separators (e.g., no "Page 1:", "---", etc.)
+- Transcribe every one of the {num_pages} pages, in order. Do not skip any page, even one that looks like a continuation of another
+- Start each page's transcription with a marker line holding only the page's position in this request: `<!-- page 1 -->` for the first image, `<!-- page 2 -->` for the second, and so on up to `<!-- page {num_pages} -->`
+- If a page is blank, output its marker line with nothing after it
+- Do NOT add any other page numbers, headers, or separators (e.g., no "Page 1:", "---", etc.)
 - Ensure consistency in style and formatting across all pages
-- If a sentence or thought continues across pages, maintain continuity
 
 """
         return batch_instruction + self.prompt
@@ -147,41 +152,37 @@ class Transcriber:
         batch_size = self.config.batch_size
         all_parts = []
 
-        # Process in batches
         for batch_start in range(0, len(images), batch_size):
             batch_end = min(batch_start + batch_size, len(images))
             batch_images = images[batch_start:batch_end]
             batch_page_nums = list(range(batch_start + 1, batch_end + 1))
 
             try:
-                text = self._transcribe_batch(batch_images, batch_page_nums)
+                page_texts = self._transcribe_batch(batch_images, batch_page_nums)
             except Exception as e:
-                # Fallback to single-page processing on error
                 print(
                     f"\nBatch processing failed for pages {batch_page_nums[0]}-{batch_page_nums[-1]}: {e}",
                     file=sys.stderr
                 )
                 print("Falling back to single-page mode for this batch...", file=sys.stderr)
-                text = self._transcribe_batch_fallback(batch_images, batch_page_nums)
+                page_texts = self._transcribe_batch_fallback(batch_images, batch_page_nums)
 
-            if plain_text:
-                text = ImageProcessor.strip_markdown_formatting(text)
+            for page_num, text in zip(batch_page_nums, page_texts):
+                if plain_text:
+                    text = ImageProcessor.strip_markdown_formatting(text)
+                text = text.strip()
 
-            if output is None:
-                all_parts.append(text.strip())
-            else:
-                # Add spacing and separator
-                if batch_start > 0:
+                if output is None:
+                    # A blank page adds nothing, not an empty paragraph.
+                    if text:
+                        all_parts.append(text)
+                    continue
+
+                if page_num > 1:
                     output.write("\n\n")
-
-                # Add page separators if requested
                 if self.config.page_separator:
-                    if len(batch_page_nums) == 1:
-                        output.write(f"---- Page {batch_page_nums[0]} ----\n")
-                    else:
-                        output.write(f"---- Pages {batch_page_nums[0]}-{batch_page_nums[-1]} ----\n")
-
-                output.write(text.strip())
+                    output.write(f"---- Page {page_num} ----\n")
+                output.write(text)
                 output.flush()
 
         if output is None:
@@ -190,54 +191,117 @@ class Transcriber:
             output.write("\n")
             return ""
 
-    def _transcribe_batch(self, batch_images: list[Image.Image], page_nums: list[int]) -> str:
+    def _transcribe_batch(self, batch_images: list[Image.Image], page_nums: list[int]) -> list[str]:
         """
-        Transcribe a batch of images.
+        Transcribe a batch of images in one request and check that every page came back.
+
+        Pages the model left out are transcribed again one at a time.
 
         Args:
             batch_images: List of PIL Images to transcribe
-            page_nums: List of page numbers for logging
+            page_nums: Document page numbers of the images, for logging
 
         Returns:
-            Transcribed text
+            One transcribed text per image, in order
         """
         if len(batch_images) == 1:
-            return self._transcribe_single_page(batch_images[0], page_nums[0])
+            return [self._transcribe_single_page(batch_images[0], page_nums[0])]
 
-        # Log batch processing
         print(
             f"Processing pages {page_nums[0]}-{page_nums[-1]} "
             f"({len(batch_images)} pages in batch)...",
             file=sys.stderr
         )
 
-        # Get batch prompt
         batch_prompt = self._get_batch_prompt(len(batch_images))
-
-        # Call provider with batch
         text = self.provider.transcribe_images_batch(batch_images, batch_prompt)
-
-        # Clean up code block wrappers
         text = ImageProcessor.strip_markdown_code_blocks(text)
 
-        return text
+        pages = self._split_pages(text, page_nums)
+        if not pages:
+            print(
+                f"Warning: no page markers in the response for pages {page_nums[0]}-{page_nums[-1]}, "
+                "so missing pages can't be detected. Transcribing each page on its own.",
+                file=sys.stderr,
+            )
+            return self._transcribe_batch_fallback(batch_images, page_nums)
 
-    def _transcribe_batch_fallback(self, batch_images: list[Image.Image], page_nums: list[int]) -> str:
+        page_texts = []
+        for index, (image, page_num) in enumerate(zip(batch_images, page_nums), start=1):
+            if index in pages:
+                page_texts.append(pages[index])
+            else:
+                print(
+                    f"Warning: the response left out page {page_num}. Transcribing it on its own.",
+                    file=sys.stderr,
+                )
+                page_texts.append(self._transcribe_single_page(image, page_num))
+        return page_texts
+
+    @staticmethod
+    def _split_pages(text: str, page_nums: list[int]) -> dict[int, str]:
         """
-        Fallback to single-page processing for a batch.
+        Split a batched response at its page markers.
+
+        Text before the first marker is kept with the first page found, and a marker
+        numbered outside the batch is dropped with its text kept on the preceding page,
+        so no transcribed text is lost. Both are reported on stderr.
+
+        Args:
+            text: The model's response
+            page_nums: Document page numbers of the batch, for warnings
+
+        Returns:
+            Text for each page position (1-based) that has a marker; empty if there are none
+        """
+        num_pages = len(page_nums)
+        markers = [m for m in _PAGE_MARKER.finditer(text) if 1 <= int(m.group(1)) <= num_pages]
+        for m in _PAGE_MARKER.finditer(text):
+            position = int(m.group(1))
+            if not 1 <= position <= num_pages:
+                print(
+                    f"Warning: the response has a marker for page {position}, but the request "
+                    f"for pages {page_nums[0]}-{page_nums[-1]} had only {num_pages}. "
+                    "Its text is kept with the page before it.",
+                    file=sys.stderr,
+                )
+        if not markers:
+            return {}
+
+        pages: dict[int, str] = {}
+        for i, m in enumerate(markers):
+            end = markers[i + 1].start() if i + 1 < len(markers) else len(text)
+            segment = _PAGE_MARKER.sub("", text[m.end():end]).strip()
+            position = int(m.group(1))
+            # A repeated marker continues the same page rather than replacing it.
+            pages[position] = f"{pages[position]}\n\n{segment}".strip() if position in pages else segment
+
+        leading = text[:markers[0].start()].strip()
+        if leading:
+            print(
+                f"Warning: the response had text before the first page marker for pages "
+                f"{page_nums[0]}-{page_nums[-1]}; it is kept with the first page.",
+                file=sys.stderr,
+            )
+            first = int(markers[0].group(1))
+            pages[first] = f"{leading}\n{pages[first]}".strip()
+        return pages
+
+    def _transcribe_batch_fallback(self, batch_images: list[Image.Image], page_nums: list[int]) -> list[str]:
+        """
+        Transcribe each image of a batch on its own.
 
         Args:
             batch_images: List of PIL Images to transcribe
-            page_nums: List of page numbers for logging
+            page_nums: Document page numbers of the images, for logging
 
         Returns:
-            Transcribed text
+            One transcribed text per image, in order
         """
-        parts = []
-        for image, page_num in zip(batch_images, page_nums):
-            text = self._transcribe_single_page(image, page_num)
-            parts.append(text.strip())
-        return "\n\n".join(parts)
+        return [
+            self._transcribe_single_page(image, page_num)
+            for image, page_num in zip(batch_images, page_nums)
+        ]
 
     def _transcribe_single_page(self, image: Image.Image, page_num: int) -> str:
         """
