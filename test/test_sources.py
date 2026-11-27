@@ -10,7 +10,7 @@ from PIL import Image
 from supernote_utils.exceptions import FileFormatError
 from supernote_utils.sources.image import ImageFileHandler
 
-TEST_NOTE = Path(__file__).parent / "test.note"
+TEST_NOTE = Path(__file__).parent / "doodles.note"
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +76,6 @@ def test_note_handler_missing_file_raises(tmp_path):
         NoteFileHandler.extract_images(tmp_path / "missing.note")
 
 
-@pytest.mark.skipif(not TEST_NOTE.exists(), reason="test.note fixture not found")
 class TestNoteFileHandler:
     def test_extract_images_returns_list(self):
         from supernote_utils.sources.note import NoteFileHandler

@@ -10,10 +10,9 @@ import pytest
 from supernote_utils.cli.note2pdf import convert_note_to_pdf
 from supernote_utils.sources.note import NoteFileHandler
 
-TEST_NOTE = Path(__file__).parent / "test.note"
+TEST_NOTE = Path(__file__).parent / "doodles.note"
 
 
-@pytest.mark.skipif(not TEST_NOTE.exists(), reason="test.note fixture not found")
 def test_note_to_pdf_creates_file():
     """NoteFileHandler.generate_pdf writes a non-empty PDF."""
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
@@ -27,7 +26,6 @@ def test_note_to_pdf_creates_file():
         output.unlink(missing_ok=True)
 
 
-@pytest.mark.skipif(not TEST_NOTE.exists(), reason="test.note fixture not found")
 def test_convert_with_explicit_output(tmp_path):
     """`-o output.pdf` writes to the specified path."""
     output = tmp_path / "out.pdf"
@@ -36,7 +34,6 @@ def test_convert_with_explicit_output(tmp_path):
     assert output.exists() and output.stat().st_size > 0
 
 
-@pytest.mark.skipif(not TEST_NOTE.exists(), reason="test.note fixture not found")
 def test_convert_derives_output_from_input(tmp_path):
     """When output is None, the PDF is written next to the input as <stem>.pdf."""
     import shutil
@@ -48,7 +45,6 @@ def test_convert_derives_output_from_input(tmp_path):
     assert expected.exists() and expected.stat().st_size > 0
 
 
-@pytest.mark.skipif(not TEST_NOTE.exists(), reason="test.note fixture not found")
 def test_note_extract_images_returns_pil_images():
     """NoteFileHandler.extract_images returns at least one PIL Image."""
     from PIL import Image

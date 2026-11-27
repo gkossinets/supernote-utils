@@ -47,6 +47,8 @@ test/*.pdf
 
 # Local notes and benchmark pages; only the benchmark texts are tracked
 *.note
+# The one tracked note: shapes only, so the .note tests run on fresh clones
+!test/doodles.note
 misc/benchmark/*
 !misc/benchmark/*.md
 
