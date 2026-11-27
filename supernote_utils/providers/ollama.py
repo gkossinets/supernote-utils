@@ -27,11 +27,12 @@ class OllamaProvider(VisionProvider):
     # benchmark on English/Russian handwriting (2026-11-27): gemma4:26b-a4b is
     # about 3x faster than gemma4:31b-mlx, which makes about half its Cyrillic
     # errors. The older gemma4:31b build was slower and less accurate than the
-    # MLX one, so it is not listed.
+    # MLX one, so it is not listed. Among small models, qwen3.5:9b beat both e4b builds.
     PREFERRED_MODELS = [
         "gemma4:26b-a4b",
         "gemma4:26b",
         "gemma4:31b-mlx",
+        "qwen3.5:9b",
         "gemma4:e4b-it-q8_0",
         "gemma4:latest",
     ]

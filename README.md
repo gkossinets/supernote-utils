@@ -205,6 +205,29 @@ python misc/calibrate.py --input en.note --reference misc/benchmark/handwriting-
 
 `.note` files are gitignored, so your handwriting stays out of the repository.
 
+## Local Models (Ollama)
+
+[Ollama](https://ollama.com) runs vision models on your own computer, so your notes never leave it and there are no API costs. Local models are slower and less accurate than the cloud models, especially on Cyrillic. On English handwriting, the recommended ones come close.
+
+| | Model | Download | Speed | Errors, English | Errors, Russian |
+|---|---|---|---|---|---|
+| **Recommended** | `gemma4:26b-a4b` | 16 GB | ~5 s/page | ~1% | 7–9% |
+| **For smaller computers** | `qwen3.5:9b` | 7.6 GB | ~6 s/page | 1–2% | 13–19% |
+
+Measured on a two-page handwritten copy of the texts in [`misc/benchmark/`](misc/benchmark/) (one English page, one Russian page) on an M1 Max with 64 GB of memory. Errors are the share of characters transcribed wrong. For comparison, Gemini Flash made under 1% errors in both languages on the same pages. As a rough guide, gemma4:26b-a4b wants a computer with 32 GB of memory or more, and qwen3.5:9b fits in 16 GB.
+
+```bash
+ollama pull gemma4:26b-a4b        # or: ollama pull qwen3.5:9b
+supernote transcribe notes.note -m ollama -o notes.md
+```
+
+With `-m ollama`, the tool picks the first of these it finds installed: `gemma4:26b-a4b`, `gemma4:31b-mlx`, `qwen3.5:9b`, `gemma4:e4b-it-q8_0`, `gemma4:latest`, and otherwise any installed model that can read images. Name a model explicitly with `-m ollama:MODEL`.
+
+- **Most accurate local option:** `gemma4:31b-mlx` (19 GB) makes about half the Russian errors of gemma4:26b-a4b, but is about 3× slower.
+- **Not recommended:** `gemma4:12b` invents plausible Russian words; `qwen3-vl:8b` keeps reasoning even when asked not to, which makes it very slow, and was the least accurate.
+
+Ollama requests are sent one page at a time, with thinking turned off. Small local models sometimes drop a whole page from a multi-page request without any error, and current local vision models (Gemma 4, Qwen 3.x) think by default, which made them several times slower with no gain in accuracy.
+
 ## Supported Models
 
 Run `supernote list-models` to see what's available in your environment (it prints the same shortcut table as below). Use either shortcuts or explicit `provider:model` format:
@@ -230,9 +253,7 @@ Run `supernote list-models` to see what's available in your environment (it prin
 -m ollama:gemma4:26b-a4b
 ```
 
-**Note:** Only locally installed Ollama models appear in the output.
-
-Ollama requests are sent one page at a time, with thinking turned off. Current local vision models (Gemma 4, Qwen 3.x) think by default, which made them several times slower on handwriting with no gain in accuracy.
+**Note:** Only locally installed Ollama models appear in the output. See [Local Models (Ollama)](#local-models-ollama) for which to install.
 
 ## Project Structure
 

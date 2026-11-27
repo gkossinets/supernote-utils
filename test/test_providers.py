@@ -494,6 +494,11 @@ class TestOllamaModelDetection:
         assert "gemma4:31b-mlx" in OllamaProvider.PREFERRED_MODELS
         assert "gemma4:31b" not in OllamaProvider.PREFERRED_MODELS
 
+    def test_small_model_preference_follows_benchmark(self):
+        # qwen3.5:9b beat both small gemma4 builds on Russian and English handwriting.
+        order = OllamaProvider.PREFERRED_MODELS
+        assert order.index("qwen3.5:9b") < order.index("gemma4:e4b-it-q8_0") < order.index("gemma4:latest")
+
     def test_sends_one_page_per_request_by_default(self):
         # Small local models silently dropped a page in 2 of 4 two-page requests.
         assert OllamaProvider.DEFAULT_BATCH_SIZE == 1
