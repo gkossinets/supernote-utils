@@ -87,6 +87,9 @@ Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6
 
 ## Future Direction
 
+### Public handwriting benchmark (to check)
+The author's handwriting samples stay out of the repo, so the benchmark notes can't be published. To make the benchmark reproducible, look for public-domain (or openly licensed) handwritten Russian and English pages with known transcriptions, e.g. scanned letters or manuscripts in archives, or handwriting datasets with permissive licenses. They should be similar to Supernote pages: lined, one writer per page, everyday script, and contain enough Cyrillic (all 33 letters, look-alike runs such as и/ш/т/л/м) to separate models. The reference texts in `misc/benchmark/` show what the private benchmark covers.
+
 ### Near-term CLI improvements
 - Resume/checkpoint support for large documents (partial transcription on failure)
 - HTML report output from test suite
@@ -115,6 +118,8 @@ The Python CLI (`supernote-utils`) would remain as the reference implementation 
 - Formatting: highlights, stars, headers, tables, lists, poetry with specific line breaks
 
 `misc/test-transcribed.md` — manually verified reference transcription of `test/test.note`, used by `misc/calibrate.py`.
+
+`misc/benchmark/handwriting-ru.md`, `handwriting-en.md` — reference texts for a 2-page benchmark note (one Russian page, one English page) that covers every letter of both alphabets, look-alike letter runs, unusual names, numbers, and context-free word lists. The texts match the handwritten pages exactly, including the writer's slips ("neigbor", "щетку" without ё). The handwritten `.note` itself is kept local and gitignored, like all handwriting samples.
 
 `misc/results/` — timestamped comparison reports written by `misc/calibrate.py` (`run_TIMESTAMP.md`).
 
