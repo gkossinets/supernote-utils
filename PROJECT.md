@@ -20,8 +20,8 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - `misc/calibrate.py` scores transcription quality against a reference (WER, CER, BLEU, Levenshtein, semantic similarity)
 
 ### Known limitations
-- Proper nouns with diacritics: 5-10% error rate depending on model
-- Cyrillic content: higher error rates, model-dependent
+- Proper nouns are the most common word errors (e.g. Pflaum as Pflaumm), more so in smaller models
+- Cyrillic is much harder than English, especially locally: on the benchmark the best cloud models made 0–1% character errors in Russian, the best local model 4–5%, small local models 13–21% (English: 0–0.5% cloud, 1–4% local). See the combined table
 - qwen3-vl:8b ignores Ollama's `think=False` and reasons anyway (17–21K characters per request), so it is slow; the provider can't turn that off
 - PDF text extraction falls back to image rendering when no embedded images exist
 - Handwritten date headers: models misread year digits (2026 as 2020/2024) and may then shift the day or weekday to make the wrong date consistent. Mitigated by the date rule, the filename date hint, and the header check (below); not eliminated
@@ -45,7 +45,7 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 
 **BYOK (bring your own key)** — no bundled API credits. Provider keys come from env vars. Default model is the `gemini-flash` shortcut (`gemini-3.8-flash`, best free-tier option).
 
-**Temperature default: 1.0** — set at the provider level; users can override with `--temperature`. Lower values (0.0–0.2) reduce hallucinations for transcription but add determinism tradeoffs.
+**Temperature default: 1.0** — set at the provider level; users can override with `--temperature`. Only Gemini and Ollama use it. Google recommends 1.0 for Gemini 3+, and on Ollama 0.1, 0.5 and 1.0 made no measurable difference (2026-11-27).
 
 **No temperature for Claude or OpenAI (2026-11-26):** current Claude models accept only default sampling, and anthropic SDK 2.x has no `temperature` parameter. Current OpenAI models return a 400 if it is sent. Both providers drop the value and warn when `--temperature` is set. Gemini (3+ pinned to 1.0 unless overridden) and Ollama still use it.
 
@@ -66,6 +66,8 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 ---
 
 ## Model Quality Findings
+
+For the current picture, start with **Combined results** at the end of this section. The test-note results before it are earlier, smaller measurements kept for history; their conclusions are superseded where the two disagree (e.g. Gemini Pro, not Flash, was the most accurate on the benchmark).
 
 The test note referred to below is a 2-page document in English and Russian (prose, a short poem, a name table, highlights and stars).
 
@@ -219,6 +221,5 @@ The Python CLI (`supernote-utils`) would remain as the reference implementation 
 
 `misc/benchmark/handwriting-ru.md`, `handwriting-en.md` — texts to copy by hand for a benchmark (one Russian page, one English page). They cover every letter of both alphabets, look-alike letter runs, unusual names, numbers, and lists of unrelated words that can't be guessed from context. To score a model, the reference must match the handwritten page exactly, slips included; keep such page-matched copies and the `.note` files in `misc/benchmark/local/` (gitignored). See README, "Benchmark on your own handwriting".
 
-`misc/results/` — timestamped comparison reports written by `misc/calibrate.py` (`run_TIMESTAMP.md`).
+`misc/results/` — timestamped comparison reports written by `misc/calibrate.py` (`run_TIMESTAMP.md`). Gitignored, since reports quote the transcribed notes.
 
-`test/results/` — gitignored; holds old local reports from the removed `test_transcription2.py`.

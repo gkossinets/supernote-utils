@@ -40,6 +40,8 @@ ENV/
 # Test outputs and results
 test/outputs/
 test/results/
+# calibrate.py reports quote the transcribed notes
+misc/results/
 test/output.md
 test-output-*.md
 test_*.txt
