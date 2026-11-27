@@ -4,13 +4,12 @@ Python utilities for managing and transcribing handwritten notes from Ratta Supe
 
 ## Features
 
-- **Universal file transcription** with auto-format detection (.note, .pdf, .png, .jpg, .jpeg, .webp)
-- **LLM vision APIs** support (Claude, Gemini, OpenAI, Ollama)
-- **Batch processing** for multi-page documents (faster, more cost-effective)
-- **Temperature control** for Gemini and Ollama models
-- **Local LLM support** via Ollama (privacy-focused, no API costs)
-- **Model calibration scripts** for comparing transcription quality across models
-- **PDF generation** from .note files
+- **Transcribes handwriting to Markdown** from .note, PDF and image files (PNG, JPEG, WebP)
+- **Local models** via Ollama: private, no API costs
+- **Cloud models** from Anthropic (Claude), Google (Gemini) and OpenAI, with your own API key
+- **Multi-page notes** sent in batches, with a check for dropped pages
+- **PDF export** from .note files
+- **Model comparison** script for scoring transcription quality
 
 ## Installation
 
