@@ -22,6 +22,7 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 ### Known limitations
 - Proper nouns with diacritics: 5-10% error rate depending on model
 - Cyrillic content: higher error rates, model-dependent
+- qwen3-vl:8b ignores Ollama's `think=False` and reasons anyway (17–21K characters per request), so it is slow; the provider can't turn that off
 - PDF text extraction falls back to image rendering when no embedded images exist
 - Handwritten date headers: models misread year digits (2026 as 2020/2024) and may then shift the day or weekday to make the wrong date consistent. Mitigated by the date rule, the filename date hint, and the header check (below); not eliminated
 
@@ -30,7 +31,7 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 - **No CI.** GitHub Actions is turned off in the repo settings, and `.github/` is gone: the Gemini CLI workflow templates were removed first, then the short-lived `ci.yml`. Before committing, run `pytest` and `ruff check supernote_utils/` locally; all tests are offline.
 - **No secrets or variables** remain in the repo settings. `GEMINI_API_KEY` and `GOOGLE_GENAI_USE_GCA` were deleted with the Gemini workflows that used them.
 - **Only `main`** exists on GitHub. The four merged `claude/...` branches (PRs #5, #7, #9, #10) were deleted. Their history is in `main` and the merged PRs.
-- **No examples at the top of the README**, at the owner's request: no handwriting images and no sample transcription. The removed screenshot is still in the v0.3.0 tag and in git history (commit `7612895`).
+- **No examples at the top of the README.**
 
 ---
 
@@ -51,27 +52,19 @@ The CLI is feature-complete for the core use case: transcribing handwritten note
 
 **Date headers (2026-10-29):** In a real journal corpus (~250 daily pages, Gemini Flash), about 11% of transcribed date headers had a wrong year, and in several the day or weekday had been shifted to agree with the misread year. The prompt's "Logic is Law" rule invited that reconciliation. Three changes: (1) a strict rule in the prompt to transcribe dates, times, and numbers digit by digit and never reconcile a date with its weekday, with "Logic is Law" limited to words; (2) `--date-hint` (default `auto`) passes the date from the input filename to the model as a hint, explicitly subordinate to clear handwriting; (3) after transcription, `core/dates.py` compares the first date in the output with the expected date and checks the weekday, printing warnings to stderr. The text is never corrected automatically, because late-night entries can legitimately carry the next day's date.
 
+**Ollama (2026-11-27):** requests are sent with `think=False`. Current local vision models (Gemma 4, Qwen 3.x) think by default; on the test note, thinking made them 5–12x slower with no gain in accuracy (gemma4:31b: 563 s → 47 s for two pages). Auto-detection (`-m ollama`, `list-models`) uses each model's reported `vision` capability instead of matching names, and prefers `gemma4:26b-a4b`, then `gemma4:26b`, `gemma4:31b`, `gemma4:e4b-it-q8_0`, `gemma4:latest`, else the first vision model. The `ollama` client floor is 0.5.0, the first release with `think`.
+
 **Batch processing default: 5 pages** — batching images into a single API call is faster and cheaper than per-page calls. Providers that support multi-image input handle this natively; others fall back to serial calls.
 
 ---
 
 ## Model Quality Findings
 
-From test runs on the `test/test.note` benchmark (2-page mixed-language document):
+The test note referred to below is a 2-page document in English and Russian (prose, a short poem, a name table, highlights and stars).
 
-| Provider | Relative Quality | Notes |
-|----------|-----------------|-------|
-| Claude Sonnet | Best overall | Best for multilingual, proper nouns |
-| Gemini Pro | Near-Claude | Fast, good quality, free tier shrinking |
-| qwen2.5-vl:7b (Ollama) | Best local | ~85-90% vs cloud, fully private |
-| llama3.2-vision (Ollama) | Good local | Q8 quantization recommended |
-| minicpm-v | Decent local | Specialized in document understanding |
+2026-11-26 spot check on the test note: Gemini 3.8 Flash was close to the reference (minor list/table formatting). Claude Sonnet 5.5 was accurate on English but misread several Russian words in the Issa poems ("Вечерний голос", "Ленечка") and the name "Pflaumm".
 
-Recommended temperatures: Claude 0.2–0.3, Gemini 0.2, Ollama 0.1. (Historical: Claude no longer accepts a temperature, and Gemini 3+ should stay at 1.0.)
-
-2026-11-26 spot check on `test/test.note`: Gemini 3.8 Flash was close to the reference (minor list/table formatting). Claude Sonnet 5.5 was accurate on English but misread several Russian words in the Issa poems ("Вечерний голос", "Ленечка") and the name "Pflaumm".
-
-2026-11-26 Claude comparison on `test/test.note`, two runs each, character error rate (CER) after stripping Markdown formatting:
+2026-11-26 Claude comparison on the test note, two runs each, character error rate (CER) after stripping Markdown formatting:
 
 | Model | CER, all text | CER, Russian only | Russian errors |
 |---|---|---|---|
@@ -83,12 +76,32 @@ Recommended temperatures: Claude 0.2–0.3, Gemini 0.2, Ollama 0.1. (Historical:
 
 Opus also got "Pflaum" right where Sonnet wrote "Pflaumm" both times. Sonnet's 6.3% run is mostly layout: it wrote the closing table as two separate columns. Both OpenAI models read "1980" as "1960" (the Fassbinder line), the kind of digit error the date rule targets. For Cyrillic-heavy notes, Gemini Flash (the default) and `gpt` are the most accurate, `claude-opus` is the better Claude option, and `gpt-mini` is the weakest. The OpenAI runs (2026-11-26) were the first live test of the OpenAI provider; it worked end to end through the CLI.
 
+2026-11-27 local models via Ollama 0.40.17 on an M1 Max, thinking off, CER after stripping Markdown. Ranges span 2–4 runs; times exclude the first run, which includes loading the model.
+
+| Model | Time, 2 pages | CER, all text | CER, Russian only |
+|---|---|---|---|
+| gemma4:26b-a4b (MoE, ~4B active, nvfp4) | 7 s | 2.3–2.7% | 7.0–8.5% |
+| gemma4:31b (older Q4_K_M build) | 47 s | 1.6–2.2% | 4.5–5.5% |
+| gemma4:e4b-it-q8_0 | 10 s | 5.6–6.0% | 13.6–15.1% |
+| gemma4:latest (e4b, nvfp4) | 6 s | 5.5–8.3% | 16.6–25.1% |
+| qwen3.5:9b | 9 s | 5.6–8.9% | 22–33% |
+| muse-glimmer:30b-mlx | ~200 s | 4.8–6.6% | 15–27% |
+| qwen3.8:27b | 25 s | 9.1–12.1% | 23–30% |
+| gemma4:12b | 15 s | 9.1–11.5% | 40–46% |
+| qwen3-vl:8b (thinks regardless) | 224–345 s | 16–18% | 47–54% |
+
+- **Default:** gemma4:26b-a4b runs as fast as the 4–9B models with about half their Russian errors. gemma4:31b is slightly more accurate but 7x slower.
+- **No measurable effect:** temperature (0.1, 0.5, 1.0); a prompt paragraph on Russian and look-alike Cyrillic letters; one page per request instead of two.
+- **Quantization may matter for e4b:** the 8-bit build was more accurate and more consistent than the 4-bit default. Not yet confirmed on the larger benchmark.
+- **Image tokens:** current Gemma 4 builds get ~1100 tokens per page. The older gemma4:31b build was capped at 512 by llama.cpp's batch size (`cap image_max_tokens ... to 512` in the server log); `num_batch: 2048` lifts the cap, with no clear accuracy gain. Ollama ignores an `image_max_tokens` option.
+- **Caveat:** the Russian part of the test note has only 28 words (199 characters), so one misread word moves the Russian CER by about 3 points. Close calls need the larger benchmark in `misc/benchmark/` (about 115 Russian and 145 English words).
+
 ---
 
 ## Future Direction
 
 ### Public handwriting benchmark (to check)
-The author's handwriting samples stay out of the repo, so the benchmark notes can't be published. To make the benchmark reproducible, look for public-domain (or openly licensed) handwritten Russian and English pages with known transcriptions, e.g. scanned letters or manuscripts in archives, or handwriting datasets with permissive licenses. They should be similar to Supernote pages: lined, one writer per page, everyday script, and contain enough Cyrillic (all 33 letters, look-alike runs such as и/ш/т/л/м) to separate models. The reference texts in `misc/benchmark/` show what the private benchmark covers.
+The repo ships no handwriting, so nobody can rerun the benchmarks as they are. To make them reproducible, look for public-domain (or openly licensed) handwritten Russian and English pages with known transcriptions, e.g. scanned letters or manuscripts in archives, or handwriting datasets with permissive licenses. They should be similar to Supernote pages: lined, one writer per page, everyday script, and contain enough Cyrillic (all 33 letters, look-alike runs such as и/ш/т/л/м) to separate models. The texts in `misc/benchmark/` show what such pages should cover.
 
 ### Near-term CLI improvements
 - Resume/checkpoint support for large documents (partial transcription on failure)
@@ -113,13 +126,9 @@ The Python CLI (`supernote-utils`) would remain as the reference implementation 
 
 ## Test Files
 
-`test/test.note` — 2-page benchmark document, kept local (removed from the repo 2026-11-27 because it is the author's handwriting; it remains in older commits). Tests that need it skip when it is missing. It contains:
-- Mixed languages: English, Russian, French, German proper nouns
-- Formatting: highlights, stars, headers, tables, lists, poetry with specific line breaks
+Tests that parse `.note` files look for `test/test.note`. No `.note` file is distributed with the repository, so on a fresh clone those tests skip; everything else runs offline.
 
-`misc/test-transcribed.md` — manually verified reference transcription of `test/test.note`, used by `misc/calibrate.py`.
-
-`misc/benchmark/handwriting-ru.md`, `handwriting-en.md` — reference texts for a 2-page benchmark note (one Russian page, one English page) that covers every letter of both alphabets, look-alike letter runs, unusual names, numbers, and context-free word lists. These are the clean texts to copy; anyone can write them out and score models on their own handwriting (README, "Benchmark on your own handwriting"). Scoring needs a reference matching each page exactly, slips included, so the author's page-matched copies live in the gitignored `misc/benchmark/local/`, next to the handwritten `.note`, which is also kept local.
+`misc/benchmark/handwriting-ru.md`, `handwriting-en.md` — texts to copy by hand for a benchmark (one Russian page, one English page). They cover every letter of both alphabets, look-alike letter runs, unusual names, numbers, and lists of unrelated words that can't be guessed from context. To score a model, the reference must match the handwritten page exactly, slips included; keep such page-matched copies and the `.note` files in `misc/benchmark/local/` (gitignored). See README, "Benchmark on your own handwriting".
 
 `misc/results/` — timestamped comparison reports written by `misc/calibrate.py` (`run_TIMESTAMP.md`).
 

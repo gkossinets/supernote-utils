@@ -168,19 +168,15 @@ Values above 1.0 increase hallucination risk and are not recommended for transcr
 `misc/calibrate.py` compares transcription quality across models and temperatures against a reference transcription. Provide any supported input format (`.note`, `.pdf`, `.png`, etc.) and a ground truth text file.
 
 ```bash
-# Default: test/test.note vs misc/test-transcribed.md. The note is not in the
-# repository; pass your own with --input and --reference.
-python misc/calibrate.py
-
-# Quick run (one temperature per model, fewer API calls)
-python misc/calibrate.py --quick
-
-# Custom input and reference
-python misc/calibrate.py --input scan.pdf --reference reference.md
+# Compare models on your own note against a transcription you have checked
+python misc/calibrate.py --input my.note --reference reference.md
 python misc/calibrate.py --input photo.png --reference ground_truth.txt
 
+# Quick run (one temperature per model, fewer API calls)
+python misc/calibrate.py --input my.note --reference reference.md --quick
+
 # Ollama models only (no cloud API calls)
-python misc/calibrate.py --ollama-only
+python misc/calibrate.py --input my.note --reference reference.md --ollama-only
 ```
 
 Requires the test dependencies: `pip install -e ".[test]"`
@@ -249,9 +245,9 @@ Ollama requests are sent with thinking turned off. Current local vision models (
 │   ├── sources/             # File source handlers
 │   └── note_format/         # Supernote .note file format parser
 ├── test/                    # Unit tests (tests that need a .note fixture skip without one)
-├── misc/                    # Model calibration scripts and reference data
+├── misc/                    # Model calibration
 │   ├── calibrate.py             # Model comparison script
-│   └── test-transcribed.md      # Reference transcription for calibration
+│   └── benchmark/               # Texts to copy by hand for a benchmark
 └── pyproject.toml           # Package configuration
 ```
 

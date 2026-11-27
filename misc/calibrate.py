@@ -293,46 +293,40 @@ def generate_report(
 
 def main():
     _MISC = Path(__file__).parent
-    _ROOT = _MISC.parent
 
     parser = argparse.ArgumentParser(
         description="Compare transcription quality across models and temperatures.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
-  # Default: use built-in test fixture against misc/test-transcribed.md
-  python misc/calibrate.py
-
-  # Custom input (any supported format) and reference
-  python misc/calibrate.py --input scan.pdf --reference reference.md
+  # Any supported input format, scored against a checked transcription
+  python misc/calibrate.py --input my.note --reference reference.md
   python misc/calibrate.py --input photo.png --reference ground_truth.txt
 
   # Quick run (one temperature per model, faster)
-  python misc/calibrate.py --quick
+  python misc/calibrate.py --input my.note --reference reference.md --quick
 
   # Ollama models only (no cloud API calls)
-  python misc/calibrate.py --ollama-only
+  python misc/calibrate.py --input my.note --reference reference.md --ollama-only
 
   # Add a specific model to the standard set
-  python misc/calibrate.py --models anthropic:claude-opus-5-5
+  python misc/calibrate.py --input my.note --reference reference.md --models anthropic:claude-opus-5-5
         """,
     )
 
     parser.add_argument(
         "--input",
         type=Path,
-        default=_ROOT / "test" / "test.note",
+        required=True,
         metavar="FILE",
-        help="Input file to transcribe (.note, .pdf, .png, .jpg, .jpeg, .webp). "
-             "Default: test/test.note",
+        help="Input file to transcribe (.note, .pdf, .png, .jpg, .jpeg, .webp)",
     )
     parser.add_argument(
         "--reference",
         type=Path,
-        default=_MISC / "test-transcribed.md",
+        required=True,
         metavar="FILE",
-        help="Ground truth transcription (.md or .txt). "
-             "Default: misc/test-transcribed.md",
+        help="Ground truth transcription (.md or .txt)",
     )
     parser.add_argument(
         "--output-dir",

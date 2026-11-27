@@ -45,8 +45,7 @@ test-output-*.md
 test_*.txt
 test/*.pdf
 
-# Handwriting samples stay local because the repo is public. Only the reference
-# texts in misc/benchmark/ are committed. test/test.note is local-only too.
+# Local notes and benchmark pages; only the benchmark texts are tracked
 *.note
 misc/benchmark/*
 !misc/benchmark/*.md
