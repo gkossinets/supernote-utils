@@ -113,7 +113,7 @@ The Python CLI (`supernote-utils`) would remain as the reference implementation 
 
 ## Test Files
 
-`test/test.note` — 2-page benchmark document containing:
+`test/test.note` — 2-page benchmark document, kept local (removed from the repo 2026-11-27 because it is the author's handwriting; it remains in older commits). Tests that need it skip when it is missing. It contains:
 - Mixed languages: English, Russian, French, German proper nouns
 - Formatting: highlights, stars, headers, tables, lists, poetry with specific line breaks
 

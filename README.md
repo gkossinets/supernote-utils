@@ -168,7 +168,8 @@ Values above 1.0 increase hallucination risk and are not recommended for transcr
 `misc/calibrate.py` compares transcription quality across models and temperatures against a reference transcription. Provide any supported input format (`.note`, `.pdf`, `.png`, etc.) and a ground truth text file.
 
 ```bash
-# Default: use built-in test fixture (test/test.note vs misc/test-transcribed.md)
+# Default: test/test.note vs misc/test-transcribed.md. The note is not in the
+# repository; pass your own with --input and --reference.
 python misc/calibrate.py
 
 # Quick run (one temperature per model, fewer API calls)
@@ -232,8 +233,7 @@ Ollama requests are sent with thinking turned off. Current local vision models (
 │   ├── providers/           # LLM provider implementations
 │   ├── sources/             # File source handlers
 │   └── note_format/         # Supernote .note file format parser
-├── test/                    # Unit tests and fixtures
-│   └── test.note            # Sample handwritten note (test fixture)
+├── test/                    # Unit tests (tests that need a .note fixture skip without one)
 ├── misc/                    # Model calibration scripts and reference data
 │   ├── calibrate.py             # Model comparison script
 │   └── test-transcribed.md      # Reference transcription for calibration

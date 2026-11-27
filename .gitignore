@@ -46,7 +46,7 @@ test_*.txt
 test/*.pdf
 
 # Handwriting samples stay local because the repo is public. Only the reference
-# texts in misc/benchmark/ are committed. (test/test.note predates this rule.)
+# texts in misc/benchmark/ are committed. test/test.note is local-only too.
 *.note
 misc/benchmark/*
 !misc/benchmark/*.md
