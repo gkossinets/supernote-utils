@@ -57,6 +57,7 @@ class OllamaProvider(VisionProvider):
             )
 
         self.base_url = base_url
+        self._warned_thinking = False
 
         # Auto-detect or validate model
         if model:
@@ -100,10 +101,31 @@ class OllamaProvider(VisionProvider):
                 # in accuracy.
                 think=False,
             )
-            return response["message"]["content"]
-
         except Exception as e:
             raise ProviderAPIError(f"Ollama API error: {str(e)}") from e
+
+        message = response["message"]
+        self._warn_if_thinking(message.get("thinking"))
+        return message["content"]
+
+    def _warn_if_thinking(self, thinking: str | None) -> None:
+        """Warn once if the model reasoned although thinking was turned off.
+
+        Some models (e.g. qwen3-vl:8b) ignore think=False, which makes each page
+        take minutes. The user can't fix that here, but should know why it's slow.
+
+        Args:
+            thinking: The response's reasoning text, if any.
+        """
+        if not thinking or self._warned_thinking:
+            return
+        self._warned_thinking = True
+        print(
+            f"Warning: {self.actual_model} returned {len(thinking):,} characters of thinking "
+            "although thinking was turned off. This model ignores the setting, so it will be "
+            "slow; consider another model (see `supernote list-models`).",
+            file=sys.stderr,
+        )
 
     def is_available(self) -> bool:
         """Check if Ollama is available"""

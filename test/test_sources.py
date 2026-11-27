@@ -69,6 +69,13 @@ class TestImageFileHandler:
 # NoteFileHandler — deterministic binary parsing, no LLM
 # ---------------------------------------------------------------------------
 
+def test_note_handler_missing_file_raises(tmp_path):
+    """Needs no fixture, so it runs on fresh clones too."""
+    from supernote_utils.sources.note import NoteFileHandler
+    with pytest.raises(FileNotFoundError):
+        NoteFileHandler.extract_images(tmp_path / "missing.note")
+
+
 @pytest.mark.skipif(not TEST_NOTE.exists(), reason="test.note fixture not found")
 class TestNoteFileHandler:
     def test_extract_images_returns_list(self):
@@ -87,12 +94,6 @@ class TestNoteFileHandler:
         for img in images:
             assert isinstance(img, Image.Image)
             assert img.width > 0 and img.height > 0
-
-    def test_missing_file_raises(self, tmp_path):
-        from supernote_utils.sources.note import NoteFileHandler
-        from supernote_utils.exceptions import FileFormatError
-        with pytest.raises((FileFormatError, Exception)):
-            NoteFileHandler.extract_images(tmp_path / "missing.note")
 
 
 # ---------------------------------------------------------------------------

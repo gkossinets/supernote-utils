@@ -543,3 +543,25 @@ class TestOllamaModelDetection:
         fake_ollama.list.side_effect = ConnectionError("connection refused")
         assert OllamaProvider.list_available_models() == []
         assert "could not reach Ollama" in capsys.readouterr().err
+
+
+class TestOllamaThinkingWarning:
+    def test_warns_when_model_thinks_despite_setting(self, fake_ollama, capsys):
+        fake_ollama.chat.return_value = {"message": {"content": "t", "thinking": "x" * 500}}
+        provider = OllamaProvider(model="qwen3-vl:8b")
+        assert provider.transcribe_image(_image(), "PROMPT") == "t"
+        err = capsys.readouterr().err
+        assert "qwen3-vl:8b" in err and "thinking" in err
+
+    def test_warns_only_once_per_provider(self, fake_ollama, capsys):
+        fake_ollama.chat.return_value = {"message": {"content": "t", "thinking": "x"}}
+        provider = OllamaProvider(model="qwen3-vl:8b")
+        provider.transcribe_image(_image(), "PROMPT")
+        capsys.readouterr()
+        provider.transcribe_image(_image(), "PROMPT")
+        assert "thinking" not in capsys.readouterr().err
+
+    def test_no_warning_without_thinking(self, fake_ollama, capsys):
+        fake_ollama.chat.return_value = {"message": {"content": "t", "thinking": None}}
+        OllamaProvider(model="gemma4:latest").transcribe_image(_image(), "PROMPT")
+        assert "thinking" not in capsys.readouterr().err
